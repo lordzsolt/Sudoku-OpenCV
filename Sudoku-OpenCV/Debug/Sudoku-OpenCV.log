@@ -1,0 +1,15 @@
+﻿Build started 11/4/2015 9:39:00 AM.
+     1>Project "G:\GIT\School\Sudoku-OpenCV\Sudoku-OpenCV\Sudoku-OpenCV.vcxproj" on node 2 (Build target(s)).
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\CL.exe /c /IC:\Developer\OpenCV\opencv_3.0\build\include /ZI /nologo /W3 /WX- /sdl /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Yu"stdafx.h" /Fp"Debug\Sudoku-OpenCV.pch" /Fo"Debug\\" /Fd"Debug\vc140.pdb" /Gd /TP /analyze- /errorReport:prompt "Sudoku-OpenCV.cpp"
+         Sudoku-OpenCV.cpp
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"G:\GIT\School\Sudoku-OpenCV\Debug\Sudoku-OpenCV.exe" /INCREMENTAL /NOLOGO /LIBPATH:C:\Developer\OpenCV\opencv_3.0\build\x86\vc12\lib opencv_ts300d.lib opencv_world300d.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /Debug /PDB:"G:\GIT\School\Sudoku-OpenCV\Debug\Sudoku-OpenCV.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"G:\GIT\School\Sudoku-OpenCV\Debug\Sudoku-OpenCV.lib" /MACHINE:X86 Debug\ImageHandler.obj
+         Debug\stdafx.obj
+         "Debug\Sudoku-OpenCV.obj"
+         Sudoku-OpenCV.vcxproj -> G:\GIT\School\Sudoku-OpenCV\Debug\Sudoku-OpenCV.exe
+     1>Done Building Project "G:\GIT\School\Sudoku-OpenCV\Sudoku-OpenCV\Sudoku-OpenCV.vcxproj" (Build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:04.31
