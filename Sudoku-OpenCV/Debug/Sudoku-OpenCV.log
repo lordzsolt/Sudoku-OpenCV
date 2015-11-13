@@ -1,4 +1,4 @@
-﻿Build started 11/4/2015 9:39:00 AM.
+﻿Build started 11/13/2015 11:49:35 AM.
      1>Project "G:\GIT\School\Sudoku-OpenCV\Sudoku-OpenCV\Sudoku-OpenCV.vcxproj" on node 2 (Build target(s)).
      1>ClCompile:
          C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\CL.exe /c /IC:\Developer\OpenCV\opencv_3.0\build\include /ZI /nologo /W3 /WX- /sdl /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Yu"stdafx.h" /Fp"Debug\Sudoku-OpenCV.pch" /Fo"Debug\\" /Fd"Debug\vc140.pdb" /Gd /TP /analyze- /errorReport:prompt "Sudoku-OpenCV.cpp"
@@ -12,4 +12,4 @@
 
 Build succeeded.
 
-Time Elapsed 00:00:04.31
+Time Elapsed 00:00:01.26

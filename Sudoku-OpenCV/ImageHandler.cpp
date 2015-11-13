@@ -42,10 +42,10 @@ void ImageHandler::rgbToYUV() {
 }
 
 void ImageHandler::integralImage() {
-	Mat result;
 	auto lastImage = this->lastImage();
+	Mat result(lastImage.size().width + 1, lastImage.size().height + 1, CV_32S, Scalar(0));
 
-	integral(lastImage, result);
+	integral(lastImage, result, CV_32S);
 	_filteredImages.push_back(result);
 }
 
@@ -68,29 +68,65 @@ void ImageHandler::binaryThresholdFilter(const int blockSize) {
 	_filteredImages.push_back(result);
 }
 
+void ImageHandler::inverseBinaryThresholdFilter(const int threshold) {
+	auto grayscaleImage = this->lastImage();
+
+	Mat result;
+	adaptiveThreshold(grayscaleImage, result, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV, threshold, 5);
+	_filteredImages.push_back(result);
+}
+
+void ImageHandler::cannyFilter() {
+	auto grayscaleImage = this->lastImage();
+	Mat result;
+	Canny(grayscaleImage, result, 15, 100, 3);
+
+	_filteredImages.push_back(result);
+}
+
+void ImageHandler::detectCorners() {
+	auto integralImage = this->lastImage();
+
+	auto patchSize = 3 * 10;
+
+//	for (int patchSize = 3; patchSize <= 64; patchSize *= 3) {
+		
+		for (auto row = 0; row < integralImage.size().height - patchSize; row++) {
+			for (auto column = 0; column < integralImage.size().width - patchSize; column++) {
+				auto featureElementSize = patchSize / 3;
+				CvPoint topLeft(row, column);
+				CvPoint bottomRight(row + featureElementSize, column + featureElementSize);
+				auto featueValue = this->valueOfAreaInImage(integralImage, topLeft, bottomRight);
+				cerr << featueValue;
+				cin.ignore();
+			}
+		}
+
+//	}
+}
+
 void ImageHandler::detectCrosses(int crossWidth, int whitespaceWidth) {
-	auto lastImage = this->lastImage();
 
 }
 
-void ImageHandler::cornerHarrisFilter() {
+void ImageHandler::aspectFit(int screenWidth, int screenHeight) {
 	auto lastImage = this->lastImage();
+	auto widthRatio = 1.0f;
+	auto heightRatio = 1.0f;
+	if (screenWidth < lastImage.size().width) {
+		widthRatio = static_cast<float>(screenWidth) / lastImage.size().width;
+	}
 
-	int blockSize = 2;
-	int apertureSize = 3;
-	double k = 0.04;
+	if (screenHeight < lastImage.size().height) {
+		heightRatio = static_cast<float>(screenHeight) / lastImage.size().width;
+	}
 
-	Mat result = Mat::zeros(lastImage.size(), CV_32FC1);
-	cornerHarris(lastImage, result, blockSize, apertureSize, k, BORDER_DEFAULT);
+	auto smallerRatio = MIN(widthRatio, heightRatio);
+
+	Mat result;
+	Size newSize(lastImage.size().width * smallerRatio, lastImage.size().height * smallerRatio);
+	resize(lastImage, result, newSize);
 	_filteredImages.push_back(result);
-
-	Mat normalisedImage;
-	normalize(result, normalisedImage, 0, 255, NORM_MINMAX, CV_32FC1, Mat());
-	_filteredImages.push_back(normalisedImage);
-
-	Mat scaledNormalizedImage;
-	convertScaleAbs(normalisedImage, scaledNormalizedImage);
-	_filteredImages.push_back(scaledNormalizedImage);
 }
 
 int ImageHandler::smallestSide(const cv::Mat image) const {
@@ -99,3 +135,4 @@ int ImageHandler::smallestSide(const cv::Mat image) const {
 	
 	return MIN(imageHeight, imageWidth);
 }
+
