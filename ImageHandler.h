@@ -21,24 +21,33 @@ public:
 
 	void integralImage();
 
+	void binaryThresholdFilter(const float blockPercent);
+	void inverseBinaryThresholdFilter(const float blockPercent);
+	
 	void gaussianBlurFilter(float sizePercent, int sigmaColor, int sigmaSpace);
-	void binaryThresholdFilter(const int threshold);
-	void inverseBinaryThresholdFilter(const int threshold);
+	void erosionFilter(int erosionType, int erosionSize);
+
 	void cannyFilter();
 
 	void detectCorners();
 	void detectCrosses(int crossWidth, int whitespaceWidth);
+	void findContours();
 
 	void aspectFit(int screenWidth, int screenHeight);
 
 private:
 	std::string _imageName;
 	cv::Mat _image;
-	cv::Mat _grayscaleImage;
+
+	std::vector<std::vector<cv::Point> > contours;
+	std::vector<cv::Vec4i> hierarchy;
 
 	std::vector<cv::Mat> _filteredImages;
 
 	int smallestSide(const cv::Mat image) const;
+	int computeHaarFeature(const cv::Mat& image, const int patchSize, const int multipliers[3][3], cv::Point origin);
+
+	void thresholdFunction(const float blockPercent, int openCVThresholdType, int inverted);
 
 //	template<typename T>
 //	T valueOfAreaInImage<T>(const cv::Mat image, const cv::Point topLeft, const cv::Point bottomRight) const {

@@ -58,28 +58,35 @@ void ImageHandler::gaussianBlurFilter(float sizePercent, int sigmaColor, int sig
 	_filteredImages.push_back(blurredImage);
 }
 
-void ImageHandler::binaryThresholdFilter(const int blockSize) {
-	auto grayscaleImage = this->lastImage();
+void ImageHandler::erosionFilter(int erosionType, int erosionSize) {
+	
+	auto lastImage = this->lastImage();
+
+	Mat element = getStructuringElement(erosionType,
+		Size(2 * erosionSize + 1, 2 * erosionSize + 1),
+		Point(erosionSize, erosionSize));
 
 	Mat result;
-	adaptiveThreshold(grayscaleImage, result, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, blockSize, 5);
+	/// Apply the erosion operation
+	erode(lastImage, result, element);
+
 	_filteredImages.push_back(result);
 }
 
-void ImageHandler::inverseBinaryThresholdFilter(const int threshold) {
-	auto grayscaleImage = this->lastImage();
+void ImageHandler::binaryThresholdFilter(const float blockPercent) {
+	thresholdFunction(blockPercent, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY);
+}
 
-	Mat result;
-	adaptiveThreshold(grayscaleImage, result, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV, threshold, 5);
-	_filteredImages.push_back(result);
+void ImageHandler::inverseBinaryThresholdFilter(const float blockPercent) {
+	thresholdFunction(blockPercent, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV);
 }
 
 void ImageHandler::cannyFilter() {
 	auto grayscaleImage = this->lastImage();
 	Mat result;
-	Canny(grayscaleImage, result, 15, 100, 3);
+	Canny(grayscaleImage, result, 15, 2 * 15, 3);
 
-	_filteredImages.push_back(result);
+	_filteredImages.push_back(result); 
 }
 
 void ImageHandler::detectCorners() {
@@ -89,22 +96,47 @@ void ImageHandler::detectCorners() {
 
 //	for (int patchSize = 3; patchSize <= 64; patchSize *= 3) {
 		
-		for (auto row = 0; row < integralImage.size().height - patchSize; row++) {
-			for (auto column = 0; column < integralImage.size().width - patchSize; column++) {
+	Mat result(integralImage.size().width, integralImage.size().height, CV_32S, Scalar(0));
+
+	auto index = 0;
+
+		for (auto row = 0; row < integralImage.size().width - patchSize - 20; row++) {
+			for (auto column = 0; column < integralImage.size().height - patchSize - 20; column++) {
 				auto featureElementSize = patchSize / 3;
 				CvPoint topLeft(row, column);
-				CvPoint bottomRight(row + featureElementSize, column + featureElementSize);
-				auto featueValue = this->valueOfAreaInImage(integralImage, topLeft, bottomRight);
-				cerr << featueValue;
-				cin.ignore();
+				int multipliers[3][3] = { {0, 0, 0}, {0, 1, 1}, {0, 1, 0} };
+				auto featueValue = this->computeHaarFeature(integralImage, featureElementSize, multipliers, topLeft);
+				if (featueValue > 300000000) {
+					result.at<int32_t>(row, column) = 255;
+//					cout << ++index << ": " << featueValue << "\r";
+//					cin.ignore();
+				}
+//				cin.ignore();
 			}
 		}
 
+
+			imwrite("../images/haarCorner.png", result);
 //	}
 }
 
 void ImageHandler::detectCrosses(int crossWidth, int whitespaceWidth) {
 
+}
+
+void ImageHandler::findContours() {
+	auto lastImage = this->lastImage();
+
+	cv::findContours(lastImage, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+
+	Mat result = Mat::zeros(lastImage.size(), CV_8UC3);
+
+	for (int i = 0; i< contours.size(); i++) {
+		auto color = Scalar(0, 255, 255);
+		drawContours(result, contours, i, color, 2, 8, hierarchy, 0, Point());
+	}
+
+	_filteredImages.push_back(result);
 }
 
 void ImageHandler::aspectFit(int screenWidth, int screenHeight) {
@@ -134,3 +166,28 @@ int ImageHandler::smallestSide(const cv::Mat image) const {
 	return MIN(imageHeight, imageWidth);
 }
 
+int ImageHandler::computeHaarFeature(const cv::Mat& image, const int patchSize, const int multipliers[3][3], cv::Point origin) {
+	auto sum = 0;
+
+	for (auto row = 0; row < 3; row++) {
+		for (auto column = 0; column < 3; column++) {
+			Point topLeft(origin.x + row * patchSize, origin.y + column * patchSize);
+			Point bottomRight(origin.x + (row + 1) * patchSize, origin.y + (column + 1) * patchSize);
+			sum += 255 * multipliers[row][column] * patchSize - valueOfAreaInImage(image, topLeft, bottomRight);
+		}
+	}
+
+	return sum;
+}
+
+void ImageHandler::thresholdFunction(const float blockPercent, int openCVThresholdType, int inverted) {
+	auto grayscaleImage = this->lastImage();
+	int blockSize = floor(this->smallestSide(grayscaleImage) * blockPercent / 100);
+	if (blockSize % 2 == 0) {
+		blockSize--;
+	}
+
+	Mat result;
+	adaptiveThreshold(grayscaleImage, result, 255, openCVThresholdType, inverted, blockSize, 5);
+	_filteredImages.push_back(result);
+}
