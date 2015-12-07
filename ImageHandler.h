@@ -15,40 +15,33 @@ public:
 	}
 
 	cv::Mat lastImage();
-
-	void grayscaleFilter();
-	void rgbToYUV();
-
-	void integralImage();
-
-	void binaryThresholdFilter(const float blockPercent);
-	void inverseBinaryThresholdFilter(const float blockPercent);
-	
-	void gaussianBlurFilter(float sizePercent, int sigmaColor, int sigmaSpace);
-	void erosionFilter(int erosionType, int erosionSize);
-
-	void cannyFilter();
-
-	void detectCorners();
-	void detectCrosses(int crossWidth, int whitespaceWidth);
-	void findContours();
+    
+    void preprocessImage();
+    void findSudokuBoard();
 
 	void aspectFit(int screenWidth, int screenHeight);
 
 private:
 	std::string _imageName;
 	cv::Mat _image;
-
-	std::vector<std::vector<cv::Point> > contours;
-	std::vector<cv::Vec4i> hierarchy;
-
+    
+    cv::Mat _sudokuBoard;
+    std::vector<std::vector<cv::Point>> _verticalLines;
+    std::vector<std::vector<cv::Point>> _horizontalLines;
+    
 	std::vector<cv::Mat> _filteredImages;
 
 	int smallestSide(const cv::Mat image) const;
-	int computeHaarFeature(const cv::Mat& image, const int patchSize, const int multipliers[3][3], cv::Point origin);
 
-	void thresholdFunction(const float blockPercent, int openCVThresholdType, int inverted);
-
+    void grayscaleFilter();
+    void blurFilter(float sizePercent);
+    void binaryThresholdFilter(const float blockPercent);
+    void inverseBinaryThresholdFilter(const float blockPercent);
+    void thresholdFunction(const float blockPercent, int openCVThresholdType, int inverted);
+    
+    void findContours();
+    void findLines();
+    
 //	template<typename T>
 //	T valueOfAreaInImage<T>(const cv::Mat image, const cv::Point topLeft, const cv::Point bottomRight) const {
 //		//A B

@@ -25,6 +25,18 @@ cv::Mat ImageHandler::lastImage() {
 	return _filteredImages.back();
 }
 
+void ImageHandler::preprocessImage() {
+    grayscaleFilter();
+    blurFilter(0.5);
+}
+
+
+void ImageHandler::findSudokuBoard() {
+    findContours();
+    findLines();
+}
+
+
 void ImageHandler::grayscaleFilter() {
 	Mat grayscaleImage;
 	auto lastImage = this->lastImage();
@@ -32,45 +44,15 @@ void ImageHandler::grayscaleFilter() {
 	_filteredImages.push_back(grayscaleImage);
 }
 
-void ImageHandler::rgbToYUV() {
-	Mat result;
-	auto lastImage = this->lastImage();
-	cvtColor(lastImage, result, CV_BGR2YCrCb);
-	_filteredImages.push_back(result);
-}
-
-void ImageHandler::integralImage() {
-	auto lastImage = this->lastImage();
-	Mat result(lastImage.size().width + 1, lastImage.size().height + 1, CV_32S, Scalar(0));
-
-	integral(lastImage, result, CV_32S);
-	_filteredImages.push_back(result);
-}
-
-void ImageHandler::gaussianBlurFilter(float sizePercent, int sigmaColor, int sigmaSpace) {
-	Mat blurredImage;
-	auto lastImage = this->lastImage();
+void ImageHandler::blurFilter(float sizePercent) {
+    auto lastImage = this->lastImage();
+    Mat blurredImage(lastImage.size().height, lastImage.size().width, lastImage.type(), Scalar(0));
 	int blockSize = static_cast<int>(this->smallestSide(lastImage) * sizePercent / 100);
 	if (blockSize % 2 == 0) {
 		blockSize -= 1;
 	}
-	GaussianBlur(lastImage, blurredImage, CvSize(blockSize, blockSize), sigmaColor, sigmaSpace);
+    blur(lastImage, blurredImage, CvSize(blockSize, blockSize));
 	_filteredImages.push_back(blurredImage);
-}
-
-void ImageHandler::erosionFilter(int erosionType, int erosionSize) {
-	
-	auto lastImage = this->lastImage();
-
-	Mat element = getStructuringElement(erosionType,
-		Size(2 * erosionSize + 1, 2 * erosionSize + 1),
-		Point(erosionSize, erosionSize));
-
-	Mat result;
-	/// Apply the erosion operation
-	erode(lastImage, result, element);
-
-	_filteredImages.push_back(result);
 }
 
 void ImageHandler::binaryThresholdFilter(const float blockPercent) {
@@ -81,62 +63,79 @@ void ImageHandler::inverseBinaryThresholdFilter(const float blockPercent) {
 	thresholdFunction(blockPercent, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV);
 }
 
-void ImageHandler::cannyFilter() {
-	auto grayscaleImage = this->lastImage();
-	Mat result;
-	Canny(grayscaleImage, result, 15, 2 * 15, 3);
-
-	_filteredImages.push_back(result); 
-}
-
-void ImageHandler::detectCorners() {
-	auto integralImage = this->lastImage();
-
-	auto patchSize = 3 * 10;
-
-//	for (int patchSize = 3; patchSize <= 64; patchSize *= 3) {
-		
-	Mat result(integralImage.size().width, integralImage.size().height, CV_32S, Scalar(0));
-
-	auto index = 0;
-
-		for (auto row = 0; row < integralImage.size().width - patchSize - 20; row++) {
-			for (auto column = 0; column < integralImage.size().height - patchSize - 20; column++) {
-				auto featureElementSize = patchSize / 3;
-				CvPoint topLeft(row, column);
-				int multipliers[3][3] = { {0, 0, 0}, {0, 1, 1}, {0, 1, 0} };
-				auto featueValue = this->computeHaarFeature(integralImage, featureElementSize, multipliers, topLeft);
-				if (featueValue > 300000000) {
-					result.at<int32_t>(row, column) = 255;
-//					cout << ++index << ": " << featueValue << "\r";
-//					cin.ignore();
-				}
-//				cin.ignore();
-			}
-		}
-
-
-			imwrite("../images/haarCorner.png", result);
-//	}
-}
-
-void ImageHandler::detectCrosses(int crossWidth, int whitespaceWidth) {
-
-}
-
 void ImageHandler::findContours() {
-	auto lastImage = this->lastImage();
+    auto originalImage = this->lastImage();
+    
+    //TODO: Find out why it doesn't work if I remove this function call
+    inverseBinaryThresholdFilter(5);
+    auto lastImage = this->lastImage();
+    
+    vector<vector<Point>> contours;
+    vector<Vec4i> hierarchy;
 
-	cv::findContours(lastImage, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+    cv::findContours(lastImage, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+    
+    int areaThreshold = lastImage.size().height * lastImage.size().width * 0.25;
+    
+    double largestArea = 100;
+    vector<Point> bestContour;
+    for (auto it : contours) {
+        auto area = contourArea(it);
+        if (area > areaThreshold && area > largestArea) {
+            largestArea = area;
+            bestContour = it;
+        }
+    }
 
-	Mat result = Mat::zeros(lastImage.size(), CV_8UC3);
+    Mat mask(lastImage.size().height, lastImage.size().width, lastImage.type(), Scalar(0));
+    vector<vector<Point>> contourVector = {bestContour};
+    drawContours(mask, contourVector, 0, Scalar(255), -1);
 
-	for (int i = 0; i< contours.size(); i++) {
-		auto color = Scalar(0, 255, 255);
-		drawContours(result, contours, i, color, 2, 8, hierarchy, 0, Point());
-	}
-
+    Mat result;
+    bitwise_and(originalImage, mask, result);
 	_filteredImages.push_back(result);
+    _sudokuBoard = result;
+}
+
+static const std::string windowName = "Display Window";
+
+static const int kSCREEN_WIDTH = 800;
+static const int kSCREEN_HEIGHT = 500;
+
+
+void ImageHandler::findLines() {
+    auto originalImage(_sudokuBoard.clone());
+    
+    inverseBinaryThresholdFilter(3);
+    auto lastImage = this->lastImage();
+    
+    vector<vector<Point>> contours;
+    vector<Vec4i> hierarchy;
+    cv::findContours(lastImage, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+    
+    Mat mask(lastImage.size().height, lastImage.size().width, lastImage.type(), Scalar(0));
+    int number = 0;
+    for (auto it : contours) {
+        auto area = boundingRect(it);
+        auto aspectRation = static_cast<float>(area.height) / area.width;
+        auto squareArea = area.size().height * area.size().width * 0.8;
+        auto contourArea = cv::contourArea(it);
+        vector<Point> points;
+        if (aspectRation > 0.8 && aspectRation < 1.2 && contourArea > squareArea) {
+            vector<vector<Point>> contourVector = {it};
+            drawContours(mask, contourVector, 0, Scalar(255), 2);
+            _filteredImages.push_back(mask);
+            aspectFit(kSCREEN_WIDTH, kSCREEN_HEIGHT);
+            imshow(windowName, this->lastImage());
+            waitKey(0);
+//            destroyAllWindows();
+            printf("%i \n", ++number);
+        }
+    }
+    
+    Mat result;
+    bitwise_and(originalImage, mask, result);
+    _filteredImages.push_back(mask);
 }
 
 void ImageHandler::aspectFit(int screenWidth, int screenHeight) {
@@ -164,20 +163,6 @@ int ImageHandler::smallestSide(const cv::Mat image) const {
 	auto imageWidth = image.size().width;
 	
 	return MIN(imageHeight, imageWidth);
-}
-
-int ImageHandler::computeHaarFeature(const cv::Mat& image, const int patchSize, const int multipliers[3][3], cv::Point origin) {
-	auto sum = 0;
-
-	for (auto row = 0; row < 3; row++) {
-		for (auto column = 0; column < 3; column++) {
-			Point topLeft(origin.x + row * patchSize, origin.y + column * patchSize);
-			Point bottomRight(origin.x + (row + 1) * patchSize, origin.y + (column + 1) * patchSize);
-			sum += 255 * multipliers[row][column] * patchSize - valueOfAreaInImage(image, topLeft, bottomRight);
-		}
-	}
-
-	return sum;
 }
 
 void ImageHandler::thresholdFunction(const float blockPercent, int openCVThresholdType, int inverted) {

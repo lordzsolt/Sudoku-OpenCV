@@ -18,3 +18,6 @@ if (OpenCV_FOUND)
 else() 
 	MESSAGE(FATAL_ERROR "OpenCV not found")
 endif()
+
+file(GLOB RESOURCE_FILES "images")
+file(COPY ${RESOURCE_FILES} DESTINATION ${CMAKE_BINARY_DIR})
