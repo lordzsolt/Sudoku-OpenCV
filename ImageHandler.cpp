@@ -36,7 +36,6 @@ void ImageHandler::findSudokuBoard() {
     findLines();
 }
 
-
 void ImageHandler::grayscaleFilter() {
     Mat grayscaleImage;
     auto lastImage = this->lastImage();
@@ -75,13 +74,11 @@ void ImageHandler::findContours() {
     
     cv::findContours(lastImage, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
     
-    int areaThreshold = lastImage.size().height * lastImage.size().width * 0.25;
-    
-    double largestArea = 100;
+    double largestArea = lastImage.size().height * lastImage.size().width * 0.25;;
     vector<Point> bestContour;
     for (auto it : contours) {
         auto area = contourArea(it);
-        if (area > areaThreshold && area > largestArea) {
+        if (area > largestArea) {
             largestArea = area;
             bestContour = it;
         }
@@ -90,28 +87,28 @@ void ImageHandler::findContours() {
     Mat mask(lastImage.size().height, lastImage.size().width, lastImage.type(), Scalar(0));
     vector<vector<Point>> contourVector = {bestContour};
     drawContours(mask, contourVector, 0, Scalar(255), -1);
+    int contourInset = MIN(boundingRect(bestContour).size().width, boundingRect(bestContour).size().height) * 0.05;
+    drawContours(mask, contourVector, 0, Scalar(0), contourInset);
     
     Mat result;
     bitwise_and(originalImage, mask, result);
     _filteredImages.push_back(result);
     _sudokuBoard = result;
+    _boardCountour = bestContour;
+    
 }
-
-
-static const std::string windowName = "Display Window";
-
-static const int kSCREEN_WIDTH = 800;
-static const int kSCREEN_HEIGHT = 500;
 
 void ImageHandler::findLines() {
     auto originalImage(_sudokuBoard.clone());
     
-    vector<Mat> lines(2);
+    auto lineOne = Mat(originalImage.size().height, originalImage.size().width, originalImage.type(), Scalar(0));
+    auto lineTwo = Mat(originalImage.size().height, originalImage.size().width, originalImage.type(), Scalar(0));
+    
+    vector<Mat> lines = {lineOne, lineTwo};
     vector<float> widthMultipliers = {0.02, 0.002};
     vector<float> heightMultipliers = {0.002, 0.02};
     vector<int> sobel = {0, 1};
     
-    //Index 0 works
     for (int i = 0 ; i < 2 ; i++) {
         float widthMultiplier = widthMultipliers[i];
         float heightMultiplier = heightMultipliers[i];
@@ -131,7 +128,7 @@ void ImageHandler::findLines() {
         vector<vector<Point>> contours;
         vector<Vec4i> hierarchy;
         cv::findContours(close, contours, hierarchy, RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
-        Mat mask(close.size().height, close.size().width, close.type(), Scalar(0));
+        auto mask = lines[i];
         for (auto it : contours) {
             auto area = boundingRect(it);
             float aspectRation = 0.0f;
@@ -143,8 +140,7 @@ void ImageHandler::findLines() {
             }
             vector<vector<Point>> contourVector = {it};
             auto color = Scalar(0);
-            if (aspectRation > 3) {
-                cout << aspectRation << endl;
+            if (aspectRation > 4) {
                 color = Scalar(255);
             }
             drawContours(mask, contourVector, 0, color, -1);
@@ -152,8 +148,16 @@ void ImageHandler::findLines() {
         
         Mat squareKernel = getStructuringElement(MORPH_RECT, CvSize(2, 2));
         morphologyEx(mask, mask, MORPH_CLOSE, squareKernel, Point(-1, -1), 3);
-        lines.push_back(mask);
     }
+    
+    Mat horizontalLines = lines[0];
+    Mat verticalLines = lines[1];
+    
+    Mat section;
+    bitwise_and(horizontalLines, verticalLines, section);
+    
+    _filteredImages.push_back(section);
+    _lineSections = section;
 }
 
 void ImageHandler::aspectFit(int screenWidth, int screenHeight) {

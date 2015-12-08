@@ -26,8 +26,8 @@ private:
 	cv::Mat _image;
     
     cv::Mat _sudokuBoard;
-    std::vector<std::vector<cv::Point>> _verticalLines;
-    std::vector<std::vector<cv::Point>> _horizontalLines;
+    std::vector<cv::Point> _boardCountour;
+    cv::Mat _lineSections;
     
 	std::vector<cv::Mat> _filteredImages;
 
