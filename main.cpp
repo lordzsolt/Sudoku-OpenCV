@@ -17,14 +17,14 @@ static const int kSCREEN_HEIGHT = 500;
 using namespace cv;
 
 int main() {
+    
+    namedWindow(windowName, WINDOW_AUTOSIZE);
 
 	ImageHandler imageHandler(imageName);
     imageHandler.preprocessImage();
     imageHandler.findSudokuBoard();
 
-	namedWindow(windowName, WINDOW_AUTOSIZE);
 	imageHandler.aspectFit(kSCREEN_WIDTH, kSCREEN_HEIGHT);
-
 	imshow(windowName, imageHandler.lastImage());
 
 	waitKey(0);

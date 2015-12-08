@@ -40,7 +40,8 @@ private:
     void thresholdFunction(const float blockPercent, int openCVThresholdType, int inverted);
     
     void findContours();
-    void findLines();
+    void findVerticalLines();
+    void findHorizontalLines();
     
 //	template<typename T>
 //	T valueOfAreaInImage<T>(const cv::Mat image, const cv::Point topLeft, const cv::Point bottomRight) const {
