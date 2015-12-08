@@ -33,8 +33,7 @@ void ImageHandler::preprocessImage() {
 
 void ImageHandler::findSudokuBoard() {
     findContours();
-    findVerticalLines();
-//    findHorizontalLines();
+    findLines();
 }
 
 
@@ -104,13 +103,15 @@ static const std::string windowName = "Display Window";
 static const int kSCREEN_WIDTH = 800;
 static const int kSCREEN_HEIGHT = 500;
 
-void ImageHandler::findVerticalLines() {
+void ImageHandler::findLines() {
     auto originalImage(_sudokuBoard.clone());
     
     vector<Mat> lines(2);
     vector<float> widthMultipliers = {0.02, 0.002};
     vector<float> heightMultipliers = {0.002, 0.02};
     vector<int> sobel = {0, 1};
+    
+    //Index 0 works
     for (int i = 0 ; i < 2 ; i++) {
         float widthMultiplier = widthMultipliers[i];
         float heightMultiplier = heightMultipliers[i];
@@ -119,7 +120,7 @@ void ImageHandler::findVerticalLines() {
     
         Mat kernel = getStructuringElement(MORPH_RECT, CvSize(kernelWidth, kernelHeight));
         Mat dx;
-//        Sobel(originalImage, dx, CV_16S, 0, 1);
+        
         Sobel(originalImage, dx, CV_16S, sobel[i], sobel[1 - i]);
         convertScaleAbs(dx, dx);
         
@@ -133,7 +134,13 @@ void ImageHandler::findVerticalLines() {
         Mat mask(close.size().height, close.size().width, close.type(), Scalar(0));
         for (auto it : contours) {
             auto area = boundingRect(it);
-            auto aspectRation = static_cast<float>(area.width) / area.height;
+            float aspectRation = 0.0f;
+            if (i == 0) {
+                aspectRation = static_cast<float>(area.width) / area.height;
+            }
+            else {
+                aspectRation = static_cast<float>(area.height) / area.width;
+            }
             vector<vector<Point>> contourVector = {it};
             auto color = Scalar(0);
             if (aspectRation > 3) {
@@ -143,64 +150,15 @@ void ImageHandler::findVerticalLines() {
             drawContours(mask, contourVector, 0, color, -1);
         }
         
-        Mat squareKernel = getStructuringElement(MORPH_RECT, CvSize(1, 1));
-        morphologyEx(mask, mask, MORPH_CLOSE, squareKernel);
-        _filteredImages.push_back(mask);
-        
-        aspectFit(kSCREEN_WIDTH, kSCREEN_HEIGHT);
-        imshow(windowName, this->lastImage());
-        waitKey(0);
+        Mat squareKernel = getStructuringElement(MORPH_RECT, CvSize(2, 2));
+        morphologyEx(mask, mask, MORPH_CLOSE, squareKernel, Point(-1, -1), 3);
+        lines.push_back(mask);
     }
-    //    _filteredImages.push_back(lines[0]);
-}
-
-
-void ImageHandler::findHorizontalLines() {
-    auto originalImage(_sudokuBoard.clone());
-
-    int kernelHeight = 2;
-    int kernelWidth = 10;
-    
-    Mat kernel = getStructuringElement(MORPH_RECT, CvSize(kernelWidth, kernelHeight));
-    Mat dx;
-    Sobel(originalImage, dx, CV_16S, 0, 2);
-    convertScaleAbs(dx, dx);
-    normalize(dx, dx, 0, 255, NORM_MINMAX);
-    
-    Mat close;
-    threshold(dx, close, 0, 255, THRESH_BINARY | THRESH_OTSU);
-    morphologyEx(close, close, MORPH_DILATE, kernel);
-    
-    vector<vector<Point>> contours;
-    vector<Vec4i> hierarchy;
-    cv::findContours(close, contours, hierarchy, RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
-    Mat mask(close.size().height, close.size().width, close.type(), Scalar(0));
-    for (auto it : contours) {
-        auto area = boundingRect(it);
-        auto aspectRation = static_cast<float>(area.width) / area.height;
-        vector<vector<Point>> contourVector = {it};
-        auto color = Scalar(0);
-        if (aspectRation > 3) {
-            cout << aspectRation << endl;
-            color = Scalar(255);
-        }
-        drawContours(mask, contourVector, 0, color, -1);
-    }
-    
-    Mat squareKernel = getStructuringElement(MORPH_RECT, CvSize(1, 1));
-    morphologyEx(mask, mask, MORPH_CLOSE, squareKernel);
-    //        lines.push_back(mask);
-    //        _filteredImages.push_back(mask);
-    
-    aspectFit(kSCREEN_WIDTH, kSCREEN_HEIGHT);
-    imshow(windowName, this->lastImage());
-    waitKey(0);
-    //    }
 }
 
 void ImageHandler::aspectFit(int screenWidth, int screenHeight) {
     auto lastImage = this->lastImage();
-    auto widthRatio = 1.0f;
+    auto widthRatio = 1.0f; 
     auto heightRatio = 1.0f;
     if (screenWidth < lastImage.size().width) {
         widthRatio = static_cast<float>(screenWidth) / lastImage.size().width;
