@@ -18,7 +18,8 @@ public:
     
     void preprocessImage();
     void findSudokuBoard();
-
+    void correctImage();
+    
 	void aspectFit(int screenWidth, int screenHeight);
 
 private:
@@ -41,6 +42,7 @@ private:
     
     void findContours();
     void findLines();
+    
     
 //	template<typename T>
 //	T valueOfAreaInImage<T>(const cv::Mat image, const cv::Point topLeft, const cv::Point bottomRight) const {

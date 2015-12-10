@@ -36,6 +36,36 @@ void ImageHandler::findSudokuBoard() {
     findLines();
 }
 
+
+void ImageHandler::correctImage() {
+    Mat result(_image.clone());
+    auto section = _lineSections;
+    vector<vector<Point>> contours;
+    vector<Vec4i> hierarchy;
+    cv::findContours(section, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+    vector<Point> contourCenters(contours.size());
+    for (auto it : contours) {
+        auto mom = moments(it);
+        int x = mom.m10 /mom.m00;
+        int y = mom.m01 / mom.m00;
+        auto radius = boundingRect(it).size().width * 0.5;
+        Point point(x,y);
+        circle(result, point, radius, Scalar(255, 0, 0), -1);
+        contourCenters.push_back(point);
+    }
+    
+    sort(contourCenters.begin(), contourCenters.end(), [](const Point& a, const Point& b) -> bool {
+        if (a.x == b.x) {
+            return a.y < b.y;
+        }
+        return a.x < b.x;
+    });
+    
+    _filteredImages.push_back(result);
+    
+    
+}
+
 void ImageHandler::grayscaleFilter() {
     Mat grayscaleImage;
     auto lastImage = this->lastImage();
@@ -87,8 +117,6 @@ void ImageHandler::findContours() {
     Mat mask(lastImage.size().height, lastImage.size().width, lastImage.type(), Scalar(0));
     vector<vector<Point>> contourVector = {bestContour};
     drawContours(mask, contourVector, 0, Scalar(255), -1);
-    int contourInset = MIN(boundingRect(bestContour).size().width, boundingRect(bestContour).size().height) * 0.05;
-    drawContours(mask, contourVector, 0, Scalar(0), contourInset);
     
     Mat result;
     bitwise_and(originalImage, mask, result);
@@ -109,6 +137,10 @@ void ImageHandler::findLines() {
     vector<float> heightMultipliers = {0.002, 0.02};
     vector<int> sobel = {0, 1};
     
+    int contourWidth = boundingRect(_boardCountour).size().width;
+    int contourHeight = boundingRect(_boardCountour).size().height;
+    
+    int number = 0;
     for (int i = 0 ; i < 2 ; i++) {
         float widthMultiplier = widthMultipliers[i];
         float heightMultiplier = heightMultipliers[i];
@@ -132,15 +164,20 @@ void ImageHandler::findLines() {
         for (auto it : contours) {
             auto area = boundingRect(it);
             float aspectRation = 0.0f;
+            bool isGreaterThanHalf = false;
             if (i == 0) {
+                isGreaterThanHalf = area.width > contourWidth * 0.5;
                 aspectRation = static_cast<float>(area.width) / area.height;
             }
             else {
+                isGreaterThanHalf = area.height > contourHeight * 0.5;
                 aspectRation = static_cast<float>(area.height) / area.width;
             }
             vector<vector<Point>> contourVector = {it};
             auto color = Scalar(0);
-            if (aspectRation > 4) {
+            if (aspectRation > 4 && isGreaterThanHalf) {
+                cout << ++number << endl
+                ;
                 color = Scalar(255);
             }
             drawContours(mask, contourVector, 0, color, -1);

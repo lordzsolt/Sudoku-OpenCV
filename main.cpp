@@ -8,7 +8,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 
-static const std::string imageName = "../images/6.jpg";
+static const std::string imageName = "../images/6.png";
 static const std::string windowName = "Display Window";
 
 static const int kSCREEN_WIDTH = 800;
@@ -23,6 +23,7 @@ int main() {
 	ImageHandler imageHandler(imageName);
     imageHandler.preprocessImage();
     imageHandler.findSudokuBoard();
+//    imageHandler.correctImage();
 
 	imageHandler.aspectFit(kSCREEN_WIDTH, kSCREEN_HEIGHT);
 	imshow(windowName, imageHandler.lastImage());
