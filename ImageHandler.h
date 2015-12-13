@@ -30,6 +30,8 @@ private:
     std::vector<cv::Point> _boardCountour;
     cv::Mat _lineSections;
     
+    std::vector<cv::Mat> _squares;
+    
 	std::vector<cv::Mat> _filteredImages;
 
 	int smallestSide(const cv::Mat image) const;

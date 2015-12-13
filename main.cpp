@@ -23,7 +23,7 @@ int main() {
 	ImageHandler imageHandler(imageName);
     imageHandler.preprocessImage();
     imageHandler.findSudokuBoard();
-//    imageHandler.correctImage();
+    imageHandler.correctImage();
 
 	imageHandler.aspectFit(kSCREEN_WIDTH, kSCREEN_HEIGHT);
 	imshow(windowName, imageHandler.lastImage());
