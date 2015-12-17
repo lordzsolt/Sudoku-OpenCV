@@ -6,6 +6,11 @@
 using namespace std;
 using namespace cv;
 
+static const std::string windowName = "Display Window";
+
+static const int kSCREEN_WIDTH = 800;
+static const int kSCREEN_HEIGHT = 500;
+
 ImageHandler::ImageHandler(std::string imageName)
 : _imageName(imageName) {
     
@@ -36,7 +41,6 @@ void ImageHandler::findSudokuBoard() {
     findLines();
 }
 
-
 void ImageHandler::correctImage() {
     Mat result(_image.clone());
     auto section = _lineSections;
@@ -49,6 +53,9 @@ void ImageHandler::correctImage() {
         auto mom = moments(it);
         int x = mom.m10 /mom.m00;
         int y = mom.m01 / mom.m00;
+        if (x < 0 || y < 0) {
+            continue;
+        }
         auto radius = _image.size().width * 0.01;
         Point point(x,y);
         circle(result, point, radius, Scalar(255, 0, 0), -1);
@@ -58,8 +65,8 @@ void ImageHandler::correctImage() {
     auto rect = boundingRect(_sudokuBoard);
     
     int boardSize = 9;
-    int heightThreshold = rect.size().height / boardSize * 0.1;
-    int widthThreshold = rect.size().width / boardSize * 0.1;
+    int heightThreshold = rect.size().height / boardSize * 0.25;
+    int widthThreshold = rect.size().width / boardSize * 0.25;
     
     vector<Point> filteredPoints;
     for (int i = 0 ; i < contourCenters.size() ; i ++) {
@@ -69,14 +76,15 @@ void ImageHandler::correctImage() {
             Point p2 = contourCenters[j];
             if (abs(p2.x - p1.x) < widthThreshold && abs(p2.y - p1.y) < heightThreshold) {
                 unique = false;
-                circle(result, p1, 50, Scalar(0, 255, 0), -1);
-                circle(result, p2, 50, Scalar(0, 0, 255), -1);
+                circle(result, p1, widthThreshold, Scalar(0, 255, 0), -1);
+                circle(result, p2, heightThreshold, Scalar(0, 0, 255), -1);
             }
         }
         if (unique) {
             filteredPoints.push_back(p1);
         }
     }
+    
     _filteredImages.push_back(result);
     
     if (filteredPoints.size() != 100) {
@@ -93,8 +101,24 @@ void ImageHandler::correctImage() {
         });
     }
     
+    Mat filteredResult(_image.clone());
+    for (auto it : filteredPoints) {
+        auto radius = _image.size().width * 0.01;
+        Point point(it.x,it.y);
+        circle(filteredResult, point, radius, Scalar(255, 0, 0), -1);
+        contourCenters.push_back(point);
+//        
+//        _filteredImages.push_back(filteredResult);
+//        aspectFit(kSCREEN_WIDTH, kSCREEN_HEIGHT);
+//        imshow(windowName, lastImage());
+//        
+//        waitKey(0);
+    }
+    
+    
     int squareSize = 150;
     int pointsPerRow = boardSize + 1;
+    int edgeInset = (rect.size().width / 9) * 0.11;
     Mat correctedBoard(squareSize * boardSize, squareSize * boardSize, _sudokuBoard.type(), Scalar(0));
     for (int i = 0 ; i < filteredPoints.size() ; i++) {
         int row = i / pointsPerRow;
@@ -102,10 +126,10 @@ void ImageHandler::correctImage() {
         if (row == 9 || column == 9) {
             continue;
         }
-        Point sourceTopLeft = filteredPoints[i];
-        Point sourceTopRight = filteredPoints[i + 1];
-        Point sourceBottomLeft = filteredPoints[i + pointsPerRow];
-        Point sourceBottomRight = filteredPoints[i + 1 + pointsPerRow];
+        Point sourceTopLeft = {filteredPoints[i].x + edgeInset, filteredPoints[i].y + edgeInset};
+        Point sourceTopRight = {filteredPoints[i + 1].x - edgeInset, filteredPoints[i + 1].y + edgeInset};
+        Point sourceBottomLeft = {filteredPoints[i + pointsPerRow].x + edgeInset, filteredPoints[i + pointsPerRow].y - edgeInset};
+        Point sourceBottomRight = {filteredPoints[i + 1 + pointsPerRow].x - edgeInset, filteredPoints[i + 1 + pointsPerRow].y - edgeInset};
         
         Point destTopLeft(column * squareSize, row * squareSize);
         Point destTopRight((column + 1) * squareSize, row * squareSize);
@@ -122,8 +146,10 @@ void ImageHandler::correctImage() {
         Mat smallImage = Mat(warpedImage, Rect(destTopLeft.x, destTopLeft.y, squareSize, squareSize)).clone();
         
         Rect roi(destTopLeft.x, destTopLeft.y, squareSize, squareSize);
-        smallImage.copyTo(correctedBoard(roi));
-        _squares.push_back(smallImage);
+        auto binaryImage = binaryThresholdFilter(smallImage, 30);
+        binaryImage.copyTo(correctedBoard(roi));
+        
+        _squares.push_back(binaryImage);
     }
     _filteredImages.push_back(correctedBoard);
 }
@@ -146,20 +172,19 @@ void ImageHandler::blurFilter(float sizePercent) {
     _filteredImages.push_back(blurredImage);
 }
 
-void ImageHandler::binaryThresholdFilter(const float blockPercent) {
-    thresholdFunction(blockPercent, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY);
+cv::Mat ImageHandler::binaryThresholdFilter(cv::Mat image, const float blockPercent) {
+    return thresholdFunction(image, blockPercent, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY);
 }
 
-void ImageHandler::inverseBinaryThresholdFilter(const float blockPercent) {
-    thresholdFunction(blockPercent, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV);
+cv::Mat ImageHandler::inverseBinaryThresholdFilter(cv::Mat image, const float blockPercent) {
+    return thresholdFunction(image, blockPercent, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV);
 }
 
 void ImageHandler::findContours() {
     auto originalImage = this->lastImage();
     
     //TODO: Find out why it doesn't work if I remove this function call
-    inverseBinaryThresholdFilter(5);
-    auto lastImage = this->lastImage();
+    auto lastImage = inverseBinaryThresholdFilter(originalImage, 5);
     
     vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
@@ -283,14 +308,17 @@ int ImageHandler::smallestSide(const cv::Mat image) const {
     return MIN(imageHeight, imageWidth);
 }
 
-void ImageHandler::thresholdFunction(const float blockPercent, int openCVThresholdType, int inverted) {
-    auto grayscaleImage = this->lastImage();
-    int blockSize = floor(this->smallestSide(grayscaleImage) * blockPercent / 100);
+cv::Mat ImageHandler::thresholdFunction(cv::Mat image, const float blockPercent, int openCVThresholdType, int inverted) {
+    int blockSize = floor(this->smallestSide(image) * blockPercent / 100);
     if (blockSize % 2 == 0) {
         blockSize--;
     }
+    if (blockSize < 3) {
+        blockSize = 3;
+    }
     
     Mat result;
-    adaptiveThreshold(grayscaleImage, result, 255, openCVThresholdType, inverted, blockSize, 5);
+    adaptiveThreshold(image, result, 255, openCVThresholdType, inverted, blockSize, 5);
     _filteredImages.push_back(result);
+    return result;
 }

@@ -38,9 +38,9 @@ private:
 
     void grayscaleFilter();
     void blurFilter(float sizePercent);
-    void binaryThresholdFilter(const float blockPercent);
-    void inverseBinaryThresholdFilter(const float blockPercent);
-    void thresholdFunction(const float blockPercent, int openCVThresholdType, int inverted);
+    cv::Mat binaryThresholdFilter(cv::Mat image, const float blockPercent);
+    cv::Mat inverseBinaryThresholdFilter(cv::Mat image, const float blockPercent);
+    cv::Mat thresholdFunction(cv::Mat image, const float blockPercent, int openCVThresholdType, int inverted);
     
     void findContours();
     void findLines();
