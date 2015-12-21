@@ -41,117 +41,19 @@ void ImageHandler::findSudokuBoard() {
     findLines();
 }
 
-void ImageHandler::correctImage() {
-    Mat result(_image.clone());
-    auto section = _lineSections;
-    vector<vector<Point>> contours;
-    vector<Vec4i> hierarchy;
-    cv::findContours(section, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
-    vector<cv::Point> contourCenters;
-    
-    for (auto it : contours) {
-        auto mom = moments(it);
-        int x = mom.m10 /mom.m00;
-        int y = mom.m01 / mom.m00;
-        if (x < 0 || y < 0) {
-            continue;
-        }
-        auto radius = _image.size().width * 0.01;
-        Point point(x,y);
-        circle(result, point, radius, Scalar(255, 0, 0), -1);
-        contourCenters.push_back(point);
+
+void ImageHandler::findSquares() {
+    correctImage();
+}
+
+
+void ImageHandler::saveSquaresTo(std::string path) {
+    for (int index = 0 ; index < _squares.size(); index++) {
+        ostringstream os;
+        os << path << "/" << index << ".jpg";
+        string imagePath = os.str();
+        imwrite(imagePath, _squares[index]);
     }
-    
-    auto rect = boundingRect(_sudokuBoard);
-    
-    int boardSize = 9;
-    int heightThreshold = rect.size().height / boardSize * 0.25;
-    int widthThreshold = rect.size().width / boardSize * 0.25;
-    
-    vector<Point> filteredPoints;
-    for (int i = 0 ; i < contourCenters.size() ; i ++) {
-        Point p1 = contourCenters[i];
-        bool unique = true;
-        for (int j = i + 1 ; j < contourCenters.size() ; j++) {
-            Point p2 = contourCenters[j];
-            if (abs(p2.x - p1.x) < widthThreshold && abs(p2.y - p1.y) < heightThreshold) {
-                unique = false;
-                circle(result, p1, widthThreshold, Scalar(0, 255, 0), -1);
-                circle(result, p2, heightThreshold, Scalar(0, 0, 255), -1);
-            }
-        }
-        if (unique) {
-            filteredPoints.push_back(p1);
-        }
-    }
-    
-    _filteredImages.push_back(result);
-    
-    if (filteredPoints.size() != 100) {
-        cout << "Filtering failed for some reason, there were " << filteredPoints.size() << " points left";
-    }
-    
-    //Sort left->right, top->bottom
-    sort(filteredPoints.begin(), filteredPoints.end(), [](const Point& a, const Point& b) -> bool {
-        return a.y < b.y;
-    });
-    for (int i = 0 ; i < 10 ; i++) {
-        sort(filteredPoints.begin() + i * 10, filteredPoints.begin() + (i + 1) * 10, [](const Point& a, const Point& b) -> bool {
-            return a.x < b.x;
-        });
-    }
-    
-    Mat filteredResult(_image.clone());
-    for (auto it : filteredPoints) {
-        auto radius = _image.size().width * 0.01;
-        Point point(it.x,it.y);
-        circle(filteredResult, point, radius, Scalar(255, 0, 0), -1);
-        contourCenters.push_back(point);
-//        
-//        _filteredImages.push_back(filteredResult);
-//        aspectFit(kSCREEN_WIDTH, kSCREEN_HEIGHT);
-//        imshow(windowName, lastImage());
-//        
-//        waitKey(0);
-    }
-    
-    
-    int squareSize = 150;
-    int pointsPerRow = boardSize + 1;
-    int edgeInset = (rect.size().width / 9) * 0.11;
-    Mat correctedBoard(squareSize * boardSize, squareSize * boardSize, _sudokuBoard.type(), Scalar(0));
-    for (int i = 0 ; i < filteredPoints.size() ; i++) {
-        int row = i / pointsPerRow;
-        int column = i % pointsPerRow;
-        if (row == 9 || column == 9) {
-            continue;
-        }
-        Point sourceTopLeft = {filteredPoints[i].x + edgeInset, filteredPoints[i].y + edgeInset};
-        Point sourceTopRight = {filteredPoints[i + 1].x - edgeInset, filteredPoints[i + 1].y + edgeInset};
-        Point sourceBottomLeft = {filteredPoints[i + pointsPerRow].x + edgeInset, filteredPoints[i + pointsPerRow].y - edgeInset};
-        Point sourceBottomRight = {filteredPoints[i + 1 + pointsPerRow].x - edgeInset, filteredPoints[i + 1 + pointsPerRow].y - edgeInset};
-        
-        Point destTopLeft(column * squareSize, row * squareSize);
-        Point destTopRight((column + 1) * squareSize, row * squareSize);
-        Point destBottomLeft(column * squareSize, (row + 1) * squareSize);
-        Point destBottomRight((column + 1) * squareSize, (row + 1) * squareSize);
-        
-        Point2f source[] = {sourceTopLeft, sourceTopRight, sourceBottomLeft, sourceBottomRight};
-        Point2f destination[] = {destTopLeft, destTopRight, destBottomLeft, destBottomRight};
-        
-        auto transform = getPerspectiveTransform(source, destination);
-        Mat warpedImage(squareSize * boardSize, squareSize * boardSize, _sudokuBoard.type(), Scalar(0));
-        warpPerspective(_sudokuBoard, warpedImage, transform, Size(squareSize * boardSize, squareSize * boardSize));
-     
-        Mat smallImage = Mat(warpedImage, Rect(destTopLeft.x, destTopLeft.y, squareSize, squareSize)).clone();
-        
-        Rect roi(destTopLeft.x, destTopLeft.y, squareSize, squareSize);
-        auto binaryImage = binaryThresholdFilter(smallImage, 30);
-        binaryImage.copyTo(correctedBoard(roi));
-        
-        _squares.push_back(binaryImage);
-    }
-    _filteredImages.push_back(correctedBoard);
 }
 
 void ImageHandler::grayscaleFilter() {
@@ -280,6 +182,113 @@ void ImageHandler::findLines() {
     _filteredImages.push_back(section);
     _lineSections = section;
 }
+
+void ImageHandler::correctImage() {
+    Mat result(_image.clone());
+    auto section = _lineSections;
+    vector<vector<Point>> contours;
+    vector<Vec4i> hierarchy;
+    cv::findContours(section, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+    vector<cv::Point> contourCenters;
+    
+    for (auto it : contours) {
+        auto mom = moments(it);
+        int x = mom.m10 /mom.m00;
+        int y = mom.m01 / mom.m00;
+        if (x < 0 || y < 0) {
+            continue;
+        }
+        auto radius = _image.size().width * 0.01;
+        Point point(x,y);
+        circle(result, point, radius, Scalar(255, 0, 0), -1);
+        contourCenters.push_back(point);
+    }
+    
+    auto rect = boundingRect(_sudokuBoard);
+    
+    int boardSize = 9;
+    int heightThreshold = rect.size().height / boardSize * 0.25;
+    int widthThreshold = rect.size().width / boardSize * 0.25;
+    
+    vector<Point> filteredPoints;
+    for (int i = 0 ; i < contourCenters.size() ; i ++) {
+        Point p1 = contourCenters[i];
+        bool unique = true;
+        for (int j = i + 1 ; j < contourCenters.size() ; j++) {
+            Point p2 = contourCenters[j];
+            if (abs(p2.x - p1.x) < widthThreshold && abs(p2.y - p1.y) < heightThreshold) {
+                unique = false;
+                circle(result, p1, widthThreshold, Scalar(0, 255, 0), -1);
+                circle(result, p2, heightThreshold, Scalar(0, 0, 255), -1);
+            }
+        }
+        if (unique) {
+            filteredPoints.push_back(p1);
+        }
+    }
+    
+    _filteredImages.push_back(result);
+    
+    if (filteredPoints.size() != 100) {
+        cout << "Filtering failed for some reason, there were " << filteredPoints.size() << " points left";
+    }
+    
+    //Sort left->right, top->bottom
+    sort(filteredPoints.begin(), filteredPoints.end(), [](const Point& a, const Point& b) -> bool {
+        return a.y < b.y;
+    });
+    for (int i = 0 ; i < 10 ; i++) {
+        sort(filteredPoints.begin() + i * 10, filteredPoints.begin() + (i + 1) * 10, [](const Point& a, const Point& b) -> bool {
+            return a.x < b.x;
+        });
+    }
+    
+    Mat filteredResult(_image.clone());
+    for (auto it : filteredPoints) {
+        auto radius = _image.size().width * 0.01;
+        Point point(it.x,it.y);
+        circle(filteredResult, point, radius, Scalar(255, 0, 0), -1);
+        contourCenters.push_back(point);
+    }
+    
+    int squareSize = outputSize;
+    int pointsPerRow = boardSize + 1;
+    int edgeInset = (rect.size().width / 9) * 0.11;
+    Mat correctedBoard(squareSize * boardSize, squareSize * boardSize, _sudokuBoard.type(), Scalar(0));
+    for (int i = 0 ; i < filteredPoints.size() ; i++) {
+        int row = i / pointsPerRow;
+        int column = i % pointsPerRow;
+        if (row == 9 || column == 9) {
+            continue;
+        }
+        Point sourceTopLeft = {filteredPoints[i].x + edgeInset, filteredPoints[i].y + edgeInset};
+        Point sourceTopRight = {filteredPoints[i + 1].x - edgeInset, filteredPoints[i + 1].y + edgeInset};
+        Point sourceBottomLeft = {filteredPoints[i + pointsPerRow].x + edgeInset, filteredPoints[i + pointsPerRow].y - edgeInset};
+        Point sourceBottomRight = {filteredPoints[i + 1 + pointsPerRow].x - edgeInset, filteredPoints[i + 1 + pointsPerRow].y - edgeInset};
+        
+        Point destTopLeft(column * squareSize, row * squareSize);
+        Point destTopRight((column + 1) * squareSize, row * squareSize);
+        Point destBottomLeft(column * squareSize, (row + 1) * squareSize);
+        Point destBottomRight((column + 1) * squareSize, (row + 1) * squareSize);
+        
+        Point2f source[] = {sourceTopLeft, sourceTopRight, sourceBottomLeft, sourceBottomRight};
+        Point2f destination[] = {destTopLeft, destTopRight, destBottomLeft, destBottomRight};
+        
+        auto transform = getPerspectiveTransform(source, destination);
+        Mat warpedImage(squareSize * boardSize, squareSize * boardSize, _sudokuBoard.type(), Scalar(0));
+        warpPerspective(_sudokuBoard, warpedImage, transform, Size(squareSize * boardSize, squareSize * boardSize));
+        
+        Mat smallImage = Mat(warpedImage, Rect(destTopLeft.x, destTopLeft.y, squareSize, squareSize)).clone();
+        
+        Rect roi(destTopLeft.x, destTopLeft.y, squareSize, squareSize);
+        auto binaryImage = binaryThresholdFilter(smallImage, 30);
+        binaryImage.copyTo(correctedBoard(roi));
+        
+        _squares.push_back(binaryImage);
+    }
+    _filteredImages.push_back(correctedBoard);
+}
+
 
 void ImageHandler::aspectFit(int screenWidth, int screenHeight) {
     auto lastImage = this->lastImage();

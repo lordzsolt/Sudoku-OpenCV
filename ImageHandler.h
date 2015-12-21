@@ -18,11 +18,15 @@ public:
     
     void preprocessImage();
     void findSudokuBoard();
-    void correctImage();
+    void findSquares();
+    void saveSquaresTo(std::string path);
     
 	void aspectFit(int screenWidth, int screenHeight);
 
 private:
+    
+    const int outputSize = 50;
+    
 	std::string _imageName;
 	cv::Mat _image;
     
@@ -44,6 +48,7 @@ private:
     
     void findContours();
     void findLines();
+    void correctImage();
     
     
 //	template<typename T>
