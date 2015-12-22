@@ -13,6 +13,10 @@ public:
 	cv::Mat image() {
 		return _image;
 	}
+    
+    std::vector<cv::Mat> squares() {
+        return _squares;
+    }
 
 	cv::Mat lastImage();
     
