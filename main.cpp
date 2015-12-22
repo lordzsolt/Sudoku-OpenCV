@@ -22,7 +22,7 @@ using namespace std;
 
 int main() {
     
-    vector<CategorizedImage> images(4);
+    vector<CategorizedImage> images;
     for (int index = 1; index <= 9; index++) {
         CategorizedImage image;
         image.value = index;
@@ -35,6 +35,9 @@ int main() {
         }
         images.push_back(image);
     }
+    
+    
+    NeuralNetwork network(images);
     
 //    images[0].value = 1;
 //    images[1].value = 2;
@@ -89,19 +92,33 @@ int main() {
 //    image4.at<uchar>(0, 7) = 255;
 //    images[3].images.push_back(image4);
     
-    NeuralNetwork network(images);
-    
     
 //    namedWindow(windowName, WINDOW_AUTOSIZE);
     
-    
-//	ImageHandler imageHandler(imageName);
-//    imageHandler.preprocessImage();
-//    imageHandler.findSudokuBoard();
-//    imageHandler.findSquares();
+//    for (int index = 1 ; index <= 9 ; index++) {
+//        
+//        ostringstream os;
+//        os << trainingSetFolderPath << "/" << index << ".jpg";
+//        string imagePath = os.str();
+//        cout << imagePath;
+//        
+//        ImageHandler imageHandler(imagePath);
+//        imageHandler.preprocessImage();
+//        imageHandler.findSudokuBoard();
+//        imageHandler.findSquares();
+//        
+//        ostringstream os2;
+//        os2 << trainingSetFolderPath << "/" << index;
+//        string savePath = os2.str();
+//        
+//        cout << savePath;
+//        
+//        imageHandler.saveSquaresTo(savePath);
+//    }
 
-//	waitKey(0);
-//    desstroyAllWindows();
+
+	waitKey(0);
+    destroyAllWindows();
     
     return 0;
 }

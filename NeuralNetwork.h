@@ -30,8 +30,8 @@ private:
     
     const int _trainingLoopCount = 2000;
     
-    const int _inputSize = 150 * 150;
-    const int _neuronsInHiddenLayer = 50;
+    const int _inputSize = 50 * 50  ;
+    const int _neuronsInHiddenLayer = 200;
     const int _outputSize = 9;
     
     const double _a = 1;
