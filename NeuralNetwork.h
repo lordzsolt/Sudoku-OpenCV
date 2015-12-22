@@ -14,6 +14,7 @@
 #include <iostream>
 #include <opencv2/highgui.hpp>
 #include <eigen3/Eigen/Dense>
+#include <eigen3/Eigen/Core>
 
 struct CategorizedImage {
     int value;
@@ -29,24 +30,33 @@ private:
     
     const int _trainingLoopCount = 2000;
     
-//    const int _inputSize = 150 * 150;
-    const int _inputSize = 3 * 3;
-//    const int _outputSize = 9;
-    const int _outputSize = 4;
-    const int _neuronsInHiddenLayer = 10;
+    const int _inputSize = 150 * 150;
+    const int _neuronsInHiddenLayer = 50;
+    const int _outputSize = 9;
     
-    const float _a = 1;
-    const float _A = 0.01;
-    const float _u = 0.01;
+    const double _a = 1;
+    const double _A = 0.01;
+    const double _u = 0.05;
     Eigen::MatrixXf _w1;
     Eigen::MatrixXf _w2;
     
-    float learnFromImage(cv::Mat image, int expectedValue);
+    double learnFromImage(cv::Mat image, int expectedValue);
     
-    float hyperbolicTangent(float value, float steepness, float theta);
-    float hyperbolicTangentDerivative(float value, float steepness, float theta);
+    double hyperbolicTangent(double value, double steepness, double theta);
+    double hyperbolicTangentDerivative(double value, double steepness, double theta);
     
-    void printMatrix(Eigen::MatrixXf matrix);
+    template <typename Derived>
+    void printMatrix(const Eigen::DenseBase<Derived>& matrix) {
+#ifndef DEBUG
+        return;
+#endif
+        for (int row = 0 ; row < matrix.rows() ; row++) {
+            for (int col = 0 ; col < matrix.cols() ; col++) {
+                std::cout << matrix(row, col) << " ";
+            }
+            std::cout << std::endl;
+        }
+    }
 };
 
 #endif /* NeuralNetwork_hpp */
