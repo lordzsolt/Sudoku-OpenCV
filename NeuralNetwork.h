@@ -28,18 +28,20 @@ public:
 private:
     std::vector<CategorizedImage> _trainingSet;
     
-    const int _trainingLoopCount = 2000;
+    const int _trainingLoopCount = 500;
     
-    const int _inputSize = 50 * 50  ;
-    const int _neuronsInHiddenLayer = 200;
+    const int _inputSize = 50 * 50;
+    const int _neuronsInHiddenLayer = 250;
     const int _outputSize = 9;
     
     const double _a = 1;
-    const double _A = 0.01;
-    const double _u = 0.05;
+    const double _A = 0.02;
+    const double _u = 0.02;
     Eigen::MatrixXf _w1;
     Eigen::MatrixXf _w2;
-    
+
+    void saveWeights();
+    void loadWeights();
     double learnFromImage(cv::Mat image, int expectedValue);
     
     double hyperbolicTangent(double value, double steepness, double theta);

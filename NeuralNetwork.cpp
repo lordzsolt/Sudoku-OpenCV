@@ -8,6 +8,7 @@
 
 #include "NeuralNetwork.h"
 #include <iostream>
+#include <fstream>
 #include <cmath>
 
 using namespace std;
@@ -33,6 +34,16 @@ NeuralNetwork::NeuralNetwork(vector<CategorizedImage> images)
         cout << loopCount << ": " << error << endl;
     }
 }
+
+void NeuralNetwork::saveWeights() {
+    ofstream output;
+    output.open("");
+}
+
+void NeuralNetwork::loadWeights() {
+    
+}
+
 
 double NeuralNetwork::learnFromImage(cv::Mat image, int expectedValue) {
     
