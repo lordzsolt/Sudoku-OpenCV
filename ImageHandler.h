@@ -26,7 +26,8 @@ private:
     std::string _imageName;
     cv::Mat _image;
     
-    const int outputSize = 50;
+    const int _boardSize = 9;
+    const int _outputSize = 50;
     
     cv::Mat _sudokuBoard;
     std::vector<cv::Point> _boardCountour;
@@ -39,13 +40,14 @@ private:
     void preprocessImage();
     void findSudokuBoard();
 
-    cv::Mat grayscaleFilter();
-    cv::Mat blurFilter(float sizePercent);
+    void grayscaleFilter();
+    void blurFilter(float sizePercent);
     cv::Mat binaryThresholdFilter(cv::Mat image, const float blockPercent);
     cv::Mat inverseBinaryThresholdFilter(cv::Mat image, const float blockPercent);
     cv::Mat thresholdFunction(cv::Mat image, const float blockPercent, int openCVThresholdType, int inverted);
     
     void findContours();
+    void warpBoard(cv::Mat mask);
     void findLines();
     void correctImage();
     

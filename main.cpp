@@ -10,7 +10,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 
-static const std::string imageName = "../images/1.jpg";
+static const std::string imageName = "../images/7.jpg";
 static const std::string trainingSetFolderPath = "../images/learn";
 
 using namespace cv;

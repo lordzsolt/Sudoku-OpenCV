@@ -44,26 +44,29 @@ void ImageHandler::findSudokuBoard() {
     correctImage();
 }
 
-cv::Mat ImageHandler::grayscaleFilter() {
+void ImageHandler::grayscaleFilter() {
     Mat grayscaleImage;
     auto lastImage = this->lastImage();
     cvtColor(lastImage, grayscaleImage, CV_BGR2GRAY);
     _filteredImages.push_back(grayscaleImage);
     displayImage(grayscaleImage);
-    return grayscaleImage;
 }
 
-cv::Mat ImageHandler::blurFilter(float sizePercent) {
+void ImageHandler::blurFilter(float sizePercent) {
     auto lastImage = this->lastImage();
-    Mat blurredImage(lastImage.size().height, lastImage.size().width, lastImage.type(), Scalar(0));
+    
+    //Calculate percentage based on smallest side
     int blockSize = static_cast<int>(this->smallestSide(lastImage) * sizePercent / 100);
     if (blockSize % 2 == 0) {
+        //Blur area has to be an odd number
         blockSize += 1;
     }
+    
+    Mat blurredImage;
     blur(lastImage, blurredImage, CvSize(blockSize, blockSize));
+    
     _filteredImages.push_back(blurredImage);
     displayImage(blurredImage);
-    return blurredImage;
 }
 
 cv::Mat ImageHandler::binaryThresholdFilter(cv::Mat image, const float blockPercent) {
@@ -76,13 +79,14 @@ cv::Mat ImageHandler::inverseBinaryThresholdFilter(cv::Mat image, const float bl
 
 void ImageHandler::findContours() {
     auto originalImage = this->lastImage();
+    
     auto lastImage = inverseBinaryThresholdFilter(originalImage, 5);
     
     vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
-    
     cv::findContours(lastImage, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
     
+    //We assume the largest area is the Sudoku board
     double largestArea = lastImage.size().height * lastImage.size().width * 0.25;;
     vector<Point> bestContour;
     for (auto it : contours) {
@@ -93,18 +97,117 @@ void ImageHandler::findContours() {
         }
     }
     
+    //Create a mask with the largest area (The board will be white and the rest black)
     Mat mask(lastImage.size().height, lastImage.size().width, lastImage.type(), Scalar(0));
     vector<vector<Point>> contourVector = {bestContour};
+    // -1 to fill in the contour
     drawContours(mask, contourVector, 0, Scalar(255), -1);
     
     displayImage(mask);
     
+    //Apply mask to cut anything outside the contour
     Mat result;
     bitwise_and(originalImage, mask, result);
+    
     _filteredImages.push_back(result);
     _sudokuBoard = result;
     _boardCountour = bestContour;
     displayImage(result);
+    
+    warpBoard(mask);
+}
+
+
+void ImageHandler::warpBoard(cv::Mat mask) {
+    auto board = _sudokuBoard;
+    Point cornerOne(-1, -1);
+    Point cornerTwo(-1, -1);
+    Point cornerThree(-1, -1);
+    Point cornerFour(-1, -1);
+    
+    for (int column = 0 ; column < board.cols ; column++) {
+        for (int row = 0 ; row < board.rows ; row++) {
+            uchar pixelOne = mask.at<uchar>(row, column);
+            if (pixelOne > 250) {
+                if (cornerOne.x == -1 && cornerOne.y == -1) {
+                    cornerOne.x = column;
+                    cornerOne.y = row;
+                }
+            }
+            uchar pixelTwo = mask.at<uchar>(board.rows - row - 1, board.cols - column - 1);
+            if (pixelTwo > 250) {
+                if (cornerTwo.x == -1 && cornerTwo.y == -1) {
+                    cornerTwo.x = board.cols - column - 1;
+                    cornerTwo.y = board.rows - row - 1;
+                }
+            }
+            if (cornerOne.x != -1 && cornerTwo.x != -1) {
+                break;
+            }
+        }
+    }
+    
+//    for (int row = 0 ; row < board.rows ; row++) {
+//        for (int column = 0 ; column < board.cols ; column++) {
+//            uchar pixelThree = mask.at<uchar>(row, column);
+//            if (pixelThree > 250) {
+//                if (cornerThree.x == -1 && cornerThree.y == -1) {
+//                    cornerThree.x = column;
+//                    cornerThree.y = row;
+//                }
+//            }
+//            uchar pixelFour = mask.at<uchar>(board.rows - row - 1, board.cols - column - 1);
+//            if (pixelFour > 250) {
+//                if (cornerFour.x == -1 && cornerFour.y == -1) {
+//                    cornerFour.x = board.cols - column - 1;
+//                    cornerFour.y = board.rows - row - 1;
+//                }
+//            }
+//            
+//            if (cornerThree.x != -1 && cornerFour.x != -1) {
+//                break;
+//            }
+//        }
+//    }
+    
+    circle(mask, cornerOne, 25, Scalar(1 * 50), -1);
+    circle(mask, cornerTwo, 25, Scalar(2 * 50), -1);
+//    circle(mask, cornerThree, 25, Scalar(3 * 50), -1);
+//    circle(mask, cornerFour, 25, Scalar(4 * 50), -1);
+    
+    displayImage(mask);
+
+    Point sourceTopLeft;
+    Point sourceTopRight;
+    Point sourceBottomLeft;
+    Point sourceBottomRight;
+    
+    if (cornerOne.x < cornerTwo.x) {
+        sourceTopLeft = cornerFour;
+        sourceTopRight = cornerTwo;
+        sourceBottomLeft = cornerOne;
+        sourceBottomRight = cornerThree;
+    }
+    else {
+        sourceTopLeft = cornerFour;
+        sourceTopRight = cornerThree;
+        sourceBottomLeft = cornerTwo;
+        sourceBottomRight = cornerOne;
+    }
+    
+    Point destTopLeft(0, 0);
+    Point destTopRight(0, _boardSize * _outputSize);
+    Point destBottomLeft(_boardSize * _outputSize, 0);
+    Point destBottomRight(_boardSize * _outputSize, _boardSize * _outputSize);
+    
+    Point2f source[] = {sourceTopLeft, sourceTopRight, sourceBottomLeft, sourceBottomRight};
+    Point2f destination[] = {destTopLeft, destTopRight, destBottomLeft, destBottomRight};
+    
+    auto transform = getPerspectiveTransform(source, destination);
+    Mat warpedImage(_outputSize * _boardSize, _outputSize * _boardSize, _sudokuBoard.type(), Scalar(0));
+    warpPerspective(_sudokuBoard, warpedImage, transform, Size(_outputSize * _boardSize, _outputSize * _boardSize));
+    
+    displayImage(warpedImage);
 }
 
 void ImageHandler::findLines() {
@@ -249,7 +352,7 @@ void ImageHandler::correctImage() {
         contourCenters.push_back(point);
     }
     
-    int squareSize = outputSize;
+    int squareSize = _outputSize;
     int pointsPerRow = boardSize + 1;
     int edgeInset = (rect.size().width / 9) * 0.11;
     Mat correctedBoard(squareSize * boardSize, squareSize * boardSize, _sudokuBoard.type(), Scalar(0));
