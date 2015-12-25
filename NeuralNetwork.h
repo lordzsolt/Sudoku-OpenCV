@@ -36,16 +36,16 @@ public:
     void categorizeImages(std::vector<UncategorizedImage> images);
     
     int _trainingLoopCount = 500;
-    int _neuronsInHiddenLayer = 250;
+    int _neuronsInHiddenLayer = 150;
     double _a = 1;
     double _A = 0.02;
-    double _u = 0.02;
+    double _u = 0.018;
     
 private:
     std::vector<CategorizedImage> _trainingSet;
     
     const int _inputSize = 50 * 50;
-    const int _outputSize = 9;
+    const int _outputSize = 10;
     
     Eigen::MatrixXf _w1;
     Eigen::MatrixXf _w2;

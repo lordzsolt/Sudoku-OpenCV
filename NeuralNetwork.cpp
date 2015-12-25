@@ -15,13 +15,14 @@ NeuralNetwork::NeuralNetwork(vector<CategorizedImage> images)
 : _trainingSet(images) {}
 
 NeuralNetwork::NeuralNetwork(vector<UncategorizedImage> images) {
-    return;
     loadWeights();
     for (int index = 0 ; index < images.size() ; index++) {
         auto image = images[index].image;
         auto reshapedImage = image.reshape(1, image.cols * image.rows);
         images[index].value = categorizeImage(reshapedImage);
 
+        cout << images[index].value << endl;
+        
         imshow("Display Window", image);
         cv::waitKey(0);
     }
@@ -38,6 +39,8 @@ void NeuralNetwork::beginLearning() {
     logger << "_A : " << _A << "\n";
     logger << "_u : " << _u << "\n";
     
+    int t0 = time(NULL);
+    
     double error = 0.0f;
     for (int loopCount = 0 ; loopCount < _trainingLoopCount; loopCount++) {
         error = 0.0f;
@@ -50,15 +53,19 @@ void NeuralNetwork::beginLearning() {
         }
         if ((loopCount % 25) == 0) {
             logger << loopCount << ": " << error << "\n";
+//            cout << loopCount << ": " << error << "\n";
         }
     }
+    
+    int t1 = time(NULL);
+    logger << "Duration: " << t1 - t0 << endl;
     
     saveWeights();
 }
 
 
 void NeuralNetwork::categorizeImages(std::vector<UncategorizedImage> images) {
-//    loadWeights();
+    loadWeights();
     
     int numberOfCategorizedInputs = 0;
     int numberOfCorrect = 0;
@@ -67,13 +74,10 @@ void NeuralNetwork::categorizeImages(std::vector<UncategorizedImage> images) {
         auto reshapedImage = image.reshape(1, image.cols * image.rows);
         int value = categorizeImage(reshapedImage);
         
-        if (images[index].value != 0) {
-            numberOfCategorizedInputs++;
-            if (value == images[index].value) {
-                numberOfCorrect++;
-            }
+        numberOfCategorizedInputs++;
+        if (value == images[index].value) {
+            numberOfCorrect++;
         }
-
     }
     logger << "Correct: " << numberOfCorrect << "/" << numberOfCategorizedInputs << "\n";
     logger << "Percent: " << (float)numberOfCorrect / numberOfCategorizedInputs << "\n";
@@ -149,7 +153,7 @@ double NeuralNetwork::learnFromImage(cv::Mat image, int expectedValue) {
     
     MatrixXf d(_outputSize, 1);
     for (int index = 0 ; index < _outputSize ; index++) {
-        if (index + 1 == expectedValue) {
+        if (index == expectedValue) {
             d(index, 0) = 1;
         }
         else {
@@ -228,14 +232,18 @@ int NeuralNetwork::categorizeImage(cv::Mat image) {
     
     double maxValue = y2(0, 0);
     int maxIndex = 0;
-    for (int index = 1 ; index < _outputSize ; index++) {
+    
+//    printMatrix(y2);
+//    cout << endl;
+    
+    for (int index = 0 ; index < _outputSize ; index++) {
         if (y2(index, 0) > maxValue) {
             maxValue = y2(index, 0);
             maxIndex = index;
         }
     }
     
-    return maxIndex + 1;
+    return maxIndex;
 }
 
 
@@ -278,7 +286,7 @@ void NeuralNetwork::openLogger() {
 
 
 std::string NeuralNetwork::w1FilePath() {
-//    return "../results/1/w1.txt";
+    return "../w1.txt";
     
     ostringstream os;
     os << finalPath << w1OutputFile;
@@ -287,7 +295,7 @@ std::string NeuralNetwork::w1FilePath() {
 }
 
 std::string NeuralNetwork::w2FilePath() {
-//    return "../results/1/w2.txt";
+    return "../w2.txt";
     
     ostringstream os;
     os << finalPath << w2OutputFile;

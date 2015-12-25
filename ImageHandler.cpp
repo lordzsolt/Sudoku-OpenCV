@@ -6,22 +6,25 @@
 using namespace std;
 using namespace cv;
 
-static const std::string windowName = "Display Window";
-
+static const std::string kWINDOW_NAME = "Display Window";
 static const int kSCREEN_WIDTH = 800;
-static const int kSCREEN_HEIGHT = 500;
+static const int kSCREEN_HEIGHT = 600;
 
 ImageHandler::ImageHandler(std::string imageName)
 : _imageName(imageName) {
     
     _image = imread(_imageName);
     if (!_image.data) {
-        std::cout << "Could not open or find the image" << std::endl;
+        throw new invalid_argument("Could not find image");
     }
+    
+    namedWindow(kWINDOW_NAME, WINDOW_AUTOSIZE);
+    
+    preprocessImage();
+    findSudokuBoard();
 }
 
-ImageHandler::~ImageHandler() {
-}
+ImageHandler::~ImageHandler() {}
 
 cv::Mat ImageHandler::lastImage() {
     if (_filteredImages.size() == 0) {
@@ -35,43 +38,32 @@ void ImageHandler::preprocessImage() {
     blurFilter(0.5);
 }
 
-
 void ImageHandler::findSudokuBoard() {
     findContours();
     findLines();
-}
-
-
-void ImageHandler::findSquares() {
     correctImage();
 }
 
-
-void ImageHandler::saveSquaresTo(std::string path) {
-    for (int index = 0 ; index < _squares.size(); index++) {
-        ostringstream os;
-        os << path << "/" << index << ".jpg";
-        string imagePath = os.str();
-        imwrite(imagePath, _squares[index]);
-    }
-}
-
-void ImageHandler::grayscaleFilter() {
+cv::Mat ImageHandler::grayscaleFilter() {
     Mat grayscaleImage;
     auto lastImage = this->lastImage();
     cvtColor(lastImage, grayscaleImage, CV_BGR2GRAY);
     _filteredImages.push_back(grayscaleImage);
+    displayImage(grayscaleImage);
+    return grayscaleImage;
 }
 
-void ImageHandler::blurFilter(float sizePercent) {
+cv::Mat ImageHandler::blurFilter(float sizePercent) {
     auto lastImage = this->lastImage();
     Mat blurredImage(lastImage.size().height, lastImage.size().width, lastImage.type(), Scalar(0));
     int blockSize = static_cast<int>(this->smallestSide(lastImage) * sizePercent / 100);
     if (blockSize % 2 == 0) {
-        blockSize -= 1;
+        blockSize += 1;
     }
     blur(lastImage, blurredImage, CvSize(blockSize, blockSize));
     _filteredImages.push_back(blurredImage);
+    displayImage(blurredImage);
+    return blurredImage;
 }
 
 cv::Mat ImageHandler::binaryThresholdFilter(cv::Mat image, const float blockPercent) {
@@ -84,8 +76,6 @@ cv::Mat ImageHandler::inverseBinaryThresholdFilter(cv::Mat image, const float bl
 
 void ImageHandler::findContours() {
     auto originalImage = this->lastImage();
-    
-    //TODO: Find out why it doesn't work if I remove this function call
     auto lastImage = inverseBinaryThresholdFilter(originalImage, 5);
     
     vector<vector<Point>> contours;
@@ -107,12 +97,14 @@ void ImageHandler::findContours() {
     vector<vector<Point>> contourVector = {bestContour};
     drawContours(mask, contourVector, 0, Scalar(255), -1);
     
+    displayImage(mask);
+    
     Mat result;
     bitwise_and(originalImage, mask, result);
     _filteredImages.push_back(result);
     _sudokuBoard = result;
     _boardCountour = bestContour;
-    
+    displayImage(result);
 }
 
 void ImageHandler::findLines() {
@@ -176,11 +168,15 @@ void ImageHandler::findLines() {
     Mat horizontalLines = lines[0];
     Mat verticalLines = lines[1];
     
+    displayImage(horizontalLines);
+    displayImage(verticalLines);
+    
     Mat section;
     bitwise_and(horizontalLines, verticalLines, section);
     
     _filteredImages.push_back(section);
     _lineSections = section;
+    displayImage(section);
 }
 
 void ImageHandler::correctImage() {
@@ -226,6 +222,8 @@ void ImageHandler::correctImage() {
             filteredPoints.push_back(p1);
         }
     }
+    
+    displayImage(result);
     
     _filteredImages.push_back(result);
     
@@ -286,29 +284,12 @@ void ImageHandler::correctImage() {
         
         _squares.push_back(binaryImage);
     }
+    
+    displayImage(correctedBoard);
+    
     _filteredImages.push_back(correctedBoard);
 }
 
-
-void ImageHandler::aspectFit(int screenWidth, int screenHeight) {
-    auto lastImage = this->lastImage();
-    auto widthRatio = 1.0f; 
-    auto heightRatio = 1.0f;
-    if (screenWidth < lastImage.size().width) {
-        widthRatio = static_cast<float>(screenWidth) / lastImage.size().width;
-    }
-    
-    if (screenHeight < lastImage.size().height) {
-        heightRatio = static_cast<float>(screenHeight) / lastImage.size().width;
-    }
-    
-    auto smallerRatio = MIN(widthRatio, heightRatio);
-
-    Size newSize(lastImage.size().width * smallerRatio, lastImage.size().height * smallerRatio);
-    Mat result(newSize.height, newSize.width, lastImage.type(), Scalar(0));
-    resize(lastImage, result, newSize);
-    _filteredImages.push_back(result);
-}
 
 int ImageHandler::smallestSide(const cv::Mat image) const {
     auto imageHeight = image.size().height;
@@ -316,6 +297,7 @@ int ImageHandler::smallestSide(const cv::Mat image) const {
     
     return MIN(imageHeight, imageWidth);
 }
+
 
 cv::Mat ImageHandler::thresholdFunction(cv::Mat image, const float blockPercent, int openCVThresholdType, int inverted) {
     int blockSize = floor(this->smallestSide(image) * blockPercent / 100);
@@ -330,4 +312,41 @@ cv::Mat ImageHandler::thresholdFunction(cv::Mat image, const float blockPercent,
     adaptiveThreshold(image, result, 255, openCVThresholdType, inverted, blockSize, 5);
     _filteredImages.push_back(result);
     return result;
+}
+
+
+cv::Mat ImageHandler::aspectFitImage(cv::Mat image, int screenWidth, int screenHeight) {
+    auto widthRatio = 1.0f;
+    auto heightRatio = 1.0f;
+    if (screenWidth < image.size().width) {
+        widthRatio = static_cast<float>(screenWidth) / image.size().width;
+    }
+    
+    if (screenHeight < image.size().height) {
+        heightRatio = static_cast<float>(screenHeight) / image.size().width;
+    }
+    
+    auto smallerRatio = MIN(widthRatio, heightRatio);
+    
+    Size newSize(image.size().width * smallerRatio, image.size().height * smallerRatio);
+    Mat result(newSize.height, newSize.width, image.type(), Scalar(0));
+    resize(image, result, newSize);
+    return result;
+}
+
+
+void ImageHandler::displayImage(cv::Mat image) {
+    auto smallImage = aspectFitImage(image, kSCREEN_WIDTH, kSCREEN_HEIGHT);
+    imshow(kWINDOW_NAME, smallImage);
+    cv::waitKey(0);
+}
+
+
+void ImageHandler::saveSquaresTo(std::string path) {
+    for (int index = 0 ; index < _squares.size(); index++) {
+        ostringstream os;
+        os << path << "/" << index << ".jpg";
+        string imagePath = os.str();
+        imwrite(imagePath, _squares[index]);
+    }
 }

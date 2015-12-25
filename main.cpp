@@ -10,12 +10,8 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 
-static const std::string imageName = "../images/6.png";
+static const std::string imageName = "../images/1.jpg";
 static const std::string trainingSetFolderPath = "../images/learn";
-
-static const std::string windowName = "Display Window";
-static const int kSCREEN_WIDTH = 800;
-static const int kSCREEN_HEIGHT = 500;
 
 using namespace cv;
 using namespace std;
@@ -26,23 +22,36 @@ void doMagic();
 
 
 int main() {
-//    doMagic();
-    trainNeuralNetwork();
+//    createTrainingSet();
+    doMagic();
+//    trainNeuralNetwork();
     return 0;
+}
+
+void doMagic() {
+    
+    ImageHandler handler(imageName);
+    std::vector<cv::Mat> squares = handler.squares();
+    
+    std::vector<UncategorizedImage> images;
+    for (int index = 0 ; index < 9 * 9 ; index++) {
+        UncategorizedImage image;
+        image.image = squares[index];
+        images.push_back(image);
+    }
+    
+    NeuralNetwork network(images);
 }
 
 
 void createTrainingSet() {
-    for (int index = 1 ; index <= 9 ; index++) {
+    for (int index = 0 ; index <= 9 ; index++) {
         ostringstream os;
         os << trainingSetFolderPath << "/" << index << ".jpg";
         string imagePath = os.str();
         cout << imagePath;
         
         ImageHandler imageHandler(imagePath);
-        imageHandler.preprocessImage();
-        imageHandler.findSudokuBoard();
-        imageHandler.findSquares();
         
         ostringstream os2;
         os2 << trainingSetFolderPath << "/" << index;
@@ -57,7 +66,7 @@ void createTrainingSet() {
 
 void trainNeuralNetwork() {
     vector<CategorizedImage> images;
-    for (int index = 1; index <= 9; index++) {
+    for (int index = 0; index <= 9; index++) {
         CategorizedImage image;
         image.value = index;
         for (int i = 0; i < 81; i++) {
@@ -72,9 +81,6 @@ void trainNeuralNetwork() {
     
     
     ImageHandler handler(imageName);
-    handler.preprocessImage();
-    handler.findSudokuBoard();
-    handler.findSquares();
     std::vector<cv::Mat> squares = handler.squares();
     
     std::vector<UncategorizedImage> testImages;
@@ -113,59 +119,25 @@ void trainNeuralNetwork() {
     testImages[75].value = 4;
     testImages[78].value = 3;
     
-    std::vector<double> a = {1, 0.9, 1.1, 0.75, 1.25};
-    std::vector<int> trainingLoops = {300, 500, 750, 1000, 2000};
-//    std::vector<int> trainingLoops = {1, 2, 3, 4, 5};
-    std::vector<double> A = {0.01, 0.02, 0.025, 0.03, 0.04};
-    std::vector<int> neurons = {50, 100, 150, 200, 250, 300};
-    std::vector<double> u = {0.01, 0.02, 0.025, 0.03, 0.04};
-    
-    for (int i = 0 ; i < 5 ; i++) {
-        for (int j = 0 ; j < 5 ; j++) {
-            for (int k = 0 ; k < 5 ; k++) {
-                for (int l = 0 ; l < 5 ; l++) {
-                    for (int m = 0 ; m < 5 ; m++) {
-                        
-                        cout << i << " " << j << " " << k << " " << l << " " << m << endl;
-                        
-                        NeuralNetwork network(images);
-                        
-                        network._a = a[i];
-                        network._trainingLoopCount = trainingLoops[j];
-                        network._A = A[k];
-                        network._neuronsInHiddenLayer = neurons[l];
-                        network._u = u[m];
-                        network.beginLearning();
-            
-                        network.categorizeImages(testImages);
-                    }
-                }
-            }
-        }
+    std::vector<int> trainingLoops = {300, 300, 300, 300, 300, 300, 300, 300, 300, 500, 750, 1000, 1000};
+    std::vector<int> neurons = {100, 100, 50, 100, 50, 150, 50, 50, 150, 150, 100, 100, 50};
+    std::vector<double> a = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+    std::vector<double> A = {0.01, 0.01, 0.02, 0.02, 0.01, 0.01, 0.02, 0.025, 0.025, 0.02, 0.02, 0.015, 0.025};
+    std::vector<double> u = {0.018, 0.025, 0.01, 0.02, 0.018, 0.018, 0.018, 0.018, 0.018, 0.018, 0.018, 0.018, 0.018};
+//
+    for (int i = 0 ; i < a.size() ; i++) {
+        
+        cout << i << " " << endl;
+        
+        NeuralNetwork network(images);
+        
+        network._a = a[i];
+        network._trainingLoopCount = trainingLoops[i];
+        network._A = A[i];
+        network._neuronsInHiddenLayer = neurons[i];
+        network._u = u[i];
+        network.beginLearning();
+        
+        network.categorizeImages(testImages);
     }
-}
-
-
-void doMagic() {
-    
-    ImageHandler handler(imageName);
-    handler.preprocessImage();
-    handler.findSudokuBoard();
-    handler.findSquares();
-    std::vector<cv::Mat> squares = handler.squares();
-    
-    namedWindow(windowName, WINDOW_AUTOSIZE);
-    
-    
-    imshow(windowName, handler.lastImage());
-    waitKey(0);
-    
-    std::vector<UncategorizedImage> images;
-    for (int index = 0 ; index < 9 * 9 ; index++) {
-        UncategorizedImage image;
-        image.image = squares[index];
-        images.push_back(image);
-    }
-    
-    NeuralNetwork network(images);
 }
