@@ -111,7 +111,7 @@ void ImageHandler::findContours() {
     
     _filteredImages.push_back(result);
     _sudokuBoard = result;
-    _boardCountour = bestContour;
+    _boardContour = bestContour;
     displayImage(result);
     
     warpBoard(mask);
@@ -120,97 +120,74 @@ void ImageHandler::findContours() {
 
 void ImageHandler::warpBoard(cv::Mat mask) {
     auto board = _sudokuBoard;
-    Point cornerOne(-1, -1);
-    Point cornerTwo(-1, -1);
-    Point cornerThree(-1, -1);
-    Point cornerFour(-1, -1);
+    Point cornerOne(_sudokuBoard.cols, _sudokuBoard.rows);
+    Point cornerTwo(0, 0);
     
+    //Starting from both sides find the highest and lowest white points in the mask (these will be 2 corners)
     for (int column = 0 ; column < board.cols ; column++) {
         for (int row = 0 ; row < board.rows ; row++) {
             uchar pixelOne = mask.at<uchar>(row, column);
+            
+            //Parts belonging to the sudoku board are white (in the mask)
             if (pixelOne > 250) {
-                if (cornerOne.x == -1 && cornerOne.y == -1) {
+                if (cornerOne.x >= column) {
                     cornerOne.x = column;
                     cornerOne.y = row;
                 }
             }
-            uchar pixelTwo = mask.at<uchar>(board.rows - row - 1, board.cols - column - 1);
+            
+            int reverseRow = board.rows - row - 1;
+            int reverseColumn = board.cols - column - 1;
+            uchar pixelTwo = mask.at<uchar>(reverseRow, reverseColumn);
             if (pixelTwo > 250) {
-                if (cornerTwo.x == -1 && cornerTwo.y == -1) {
-                    cornerTwo.x = board.cols - column - 1;
-                    cornerTwo.y = board.rows - row - 1;
+                if (cornerTwo.x <= reverseColumn) {
+                    cornerTwo.x = reverseColumn;
+                    cornerTwo.y = reverseRow;
                 }
             }
-            if (cornerOne.x != -1 && cornerTwo.x != -1) {
-                break;
-            }
+        }
+        //Stop searching when both corners are found.
+        if (cornerOne.x != _sudokuBoard.cols && cornerTwo.x != 0) {
+            break;
         }
     }
     
-//    for (int row = 0 ; row < board.rows ; row++) {
-//        for (int column = 0 ; column < board.cols ; column++) {
-//            uchar pixelThree = mask.at<uchar>(row, column);
-//            if (pixelThree > 250) {
-//                if (cornerThree.x == -1 && cornerThree.y == -1) {
-//                    cornerThree.x = column;
-//                    cornerThree.y = row;
-//                }
-//            }
-//            uchar pixelFour = mask.at<uchar>(board.rows - row - 1, board.cols - column - 1);
-//            if (pixelFour > 250) {
-//                if (cornerFour.x == -1 && cornerFour.y == -1) {
-//                    cornerFour.x = board.cols - column - 1;
-//                    cornerFour.y = board.rows - row - 1;
-//                }
-//            }
-//            
-//            if (cornerThree.x != -1 && cornerFour.x != -1) {
-//                break;
-//            }
-//        }
-//    }
-    
     circle(mask, cornerOne, 25, Scalar(1 * 50), -1);
     circle(mask, cornerTwo, 25, Scalar(2 * 50), -1);
-//    circle(mask, cornerThree, 25, Scalar(3 * 50), -1);
-//    circle(mask, cornerFour, 25, Scalar(4 * 50), -1);
-    
     displayImage(mask);
-
-    Point sourceTopLeft;
-    Point sourceTopRight;
-    Point sourceBottomLeft;
-    Point sourceBottomRight;
     
-    if (cornerOne.x < cornerTwo.x) {
-        sourceTopLeft = cornerFour;
-        sourceTopRight = cornerTwo;
-        sourceBottomLeft = cornerOne;
-        sourceBottomRight = cornerThree;
-    }
-    else {
-        sourceTopLeft = cornerFour;
-        sourceTopRight = cornerThree;
-        sourceBottomLeft = cornerTwo;
-        sourceBottomRight = cornerOne;
+    int sign = cornerOne.y < cornerTwo.y ? -1 : 1;
+    
+    int deltaY = cornerTwo.y - cornerOne.y;
+    int deltaX = cornerTwo.x - cornerOne.x;
+    
+    //if the delta is less than 3% of the whole board it means finding the corners failed
+    //(due to image being taken from a perspective (ex: Looks something like this "/ \"
+    //Or it's rotated too much, we're unable to decide the orientation of the board "\" or "/"
+    if (deltaY < deltaX * 0.03) {
+        return;
     }
     
-    Point destTopLeft(0, 0);
-    Point destTopRight(0, _boardSize * _outputSize);
-    Point destBottomLeft(_boardSize * _outputSize, 0);
-    Point destBottomRight(_boardSize * _outputSize, _boardSize * _outputSize);
+    float arctan = atan2(deltaY, deltaX);
+    float angle = arctan * 180 / M_PI + sign * 45.0;
     
-    Point2f source[] = {sourceTopLeft, sourceTopRight, sourceBottomLeft, sourceBottomRight};
-    Point2f destination[] = {destTopLeft, destTopRight, destBottomLeft, destBottomRight};
+    //Rotate by the center of the contour
+    auto mom = moments(_boardContour);
+    Point centroid;
+    centroid.x = mom.m10 /mom.m00;
+    centroid.y = mom.m01 / mom.m00;
     
-    auto transform = getPerspectiveTransform(source, destination);
-    Mat warpedImage(_outputSize * _boardSize, _outputSize * _boardSize, _sudokuBoard.type(), Scalar(0));
-    warpPerspective(_sudokuBoard, warpedImage, transform, Size(_outputSize * _boardSize, _outputSize * _boardSize));
+    auto rotationMatrix = getRotationMatrix2D(centroid, angle, 1.0);
+    Mat warpedImage;
+    warpAffine(_sudokuBoard, warpedImage, rotationMatrix, _sudokuBoard.size());
+    warpAffine(_image, _image, rotationMatrix, _image.size());
     
     displayImage(warpedImage);
+    _sudokuBoard = warpedImage;
 }
 
 void ImageHandler::findLines() {
+    
     auto originalImage(_sudokuBoard.clone());
     
     auto lineOne = Mat(originalImage.size().height, originalImage.size().width, originalImage.type(), Scalar(0));
@@ -221,8 +198,8 @@ void ImageHandler::findLines() {
     vector<float> heightMultipliers = {0.002, 0.02};
     vector<int> sobel = {0, 1};
     
-    int contourWidth = boundingRect(_boardCountour).size().width;
-    int contourHeight = boundingRect(_boardCountour).size().height;
+    int contourWidth = boundingRect(_boardContour).size().width;
+    int contourHeight = boundingRect(_boardContour).size().height;
     
     for (int i = 0 ; i < 2 ; i++) {
         float widthMultiplier = widthMultipliers[i];

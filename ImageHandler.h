@@ -30,7 +30,7 @@ private:
     const int _outputSize = 50;
     
     cv::Mat _sudokuBoard;
-    std::vector<cv::Point> _boardCountour;
+    std::vector<cv::Point> _boardContour;
     cv::Mat _lineSections;
     
     std::vector<cv::Mat> _squares;
