@@ -10,7 +10,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 
-static const std::string imageName = "../images/5.jpg";
+static const std::string imageName = "../images/1.jpg";
 static const std::string trainingSetFolderPath = "../images/learn";
 
 using namespace cv;
@@ -23,8 +23,8 @@ void doMagic();
 
 int main() {
 //    createTrainingSet();
-    doMagic();
-//    trainNeuralNetwork();
+//    doMagic();
+    trainNeuralNetwork();
     return 0;
 }
 
@@ -124,7 +124,7 @@ void trainNeuralNetwork() {
     std::vector<double> a = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
     std::vector<double> A = {0.01, 0.01, 0.02, 0.02, 0.01, 0.01, 0.02, 0.025, 0.025, 0.02, 0.02, 0.015, 0.025};
     std::vector<double> u = {0.018, 0.025, 0.01, 0.02, 0.018, 0.018, 0.018, 0.018, 0.018, 0.018, 0.018, 0.018, 0.018};
-//
+
     for (int i = 0 ; i < a.size() ; i++) {
         
         cout << i << " " << endl;

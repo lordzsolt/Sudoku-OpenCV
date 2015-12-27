@@ -46,6 +46,7 @@ private:
     
     const int _inputSize = 50 * 50;
     const int _outputSize = 10;
+    const int _inputMatrixSize = _inputSize + 1;
     
     Eigen::MatrixXf _w1;
     Eigen::MatrixXf _w2;

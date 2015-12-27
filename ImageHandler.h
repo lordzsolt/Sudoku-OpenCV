@@ -48,7 +48,8 @@ private:
     
     void findContours();
     void warpBoard(cv::Mat mask);
-    void findLines();
+    void findLinesWithHoughLines();
+    void findLinesWithContours();
     void correctImage();
     
     int smallestSide(const cv::Mat image) const;

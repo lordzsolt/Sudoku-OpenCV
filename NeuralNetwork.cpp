@@ -75,6 +75,7 @@ void NeuralNetwork::categorizeImages(std::vector<UncategorizedImage> images) {
         int value = categorizeImage(reshapedImage);
         
         numberOfCategorizedInputs++;
+        
         if (value == images[index].value) {
             numberOfCorrect++;
         }
@@ -125,7 +126,7 @@ void NeuralNetwork::loadWeights() {
         input.close();
     }
     else {
-        _w1 = MatrixXf::Random(_inputSize, _neuronsInHiddenLayer) * 0.5 * _A;
+        _w1 = MatrixXf::Random(_inputMatrixSize, _neuronsInHiddenLayer) * 0.5 * _A;
     }
     
     input.open(w2FilePath());
@@ -150,7 +151,6 @@ void NeuralNetwork::loadWeights() {
 
 
 double NeuralNetwork::learnFromImage(cv::Mat image, int expectedValue) {
-    
     MatrixXf d(_outputSize, 1);
     for (int index = 0 ; index < _outputSize ; index++) {
         if (index == expectedValue) {
@@ -161,10 +161,14 @@ double NeuralNetwork::learnFromImage(cv::Mat image, int expectedValue) {
         }
     }
     
-    MatrixXf x1(_inputSize, 1);
+    MatrixXf x1(_inputMatrixSize, 1);
+    
+    //Bias
+    x1(0, 0) = 1;
+    
     for (int inputIndex = 0 ; inputIndex < _inputSize ; inputIndex++) {
         unsigned char value = image.at<uchar>(inputIndex, 0);
-        x1(inputIndex, 0) =  value > 150;
+        x1(inputIndex + 1, 0) =  value > 150;
     }
     
     MatrixXf s1 = _w1.transpose() * x1;
@@ -207,10 +211,12 @@ double NeuralNetwork::learnFromImage(cv::Mat image, int expectedValue) {
 
 
 int NeuralNetwork::categorizeImage(cv::Mat image) {
-    MatrixXf x1(_inputSize, 1);
-    for (int inputIndex = 0 ; inputIndex < _inputSize ; inputIndex++) {
+    MatrixXf x1(_inputMatrixSize, 1);
+    //Bias
+    x1(0, 0) = 1;
+    for (int inputIndex = 0 ; inputIndex < _inputSize; inputIndex++) {
         unsigned char value = image.at<uchar>(inputIndex, 0);
-        x1(inputIndex, 0) =  value > 150;
+        x1(inputIndex + 1, 0) =  value > 150;
     }
     
     MatrixXf s1 = _w1.transpose() * x1;
@@ -232,9 +238,6 @@ int NeuralNetwork::categorizeImage(cv::Mat image) {
     
     double maxValue = y2(0, 0);
     int maxIndex = 0;
-    
-//    printMatrix(y2);
-//    cout << endl;
     
     for (int index = 0 ; index < _outputSize ; index++) {
         if (y2(index, 0) > maxValue) {
@@ -286,7 +289,7 @@ void NeuralNetwork::openLogger() {
 
 
 std::string NeuralNetwork::w1FilePath() {
-    return "../w1.txt";
+//    return "../w1.txt";
     
     ostringstream os;
     os << finalPath << w1OutputFile;
@@ -295,7 +298,7 @@ std::string NeuralNetwork::w1FilePath() {
 }
 
 std::string NeuralNetwork::w2FilePath() {
-    return "../w2.txt";
+//    return "../w2.txt";
     
     ostringstream os;
     os << finalPath << w2OutputFile;
