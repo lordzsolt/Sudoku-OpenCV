@@ -10,7 +10,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 
-static const std::string imageName = "../images/1.jpg";
+static const std::string imageName = "../images/2.jpg";
 static const std::string trainingSetFolderPath = "../images/learn";
 
 using namespace cv;
@@ -18,17 +18,17 @@ using namespace std;
 
 void createTrainingSet();
 void trainNeuralNetwork();
-void doMagic();
+void testNetwork();
 
 
 int main() {
+    testNetwork();
 //    createTrainingSet();
-//    doMagic();
-    trainNeuralNetwork();
+//    trainNeuralNetwork();
     return 0;
 }
 
-void doMagic() {
+void testNetwork() {
     
     ImageHandler handler(imageName);
     std::vector<cv::Mat> squares = handler.squares();
@@ -80,7 +80,7 @@ void trainNeuralNetwork() {
     }
     
     
-    ImageHandler handler(imageName);
+    ImageHandler handler("../images/1.jpg");
     std::vector<cv::Mat> squares = handler.squares();
     
     std::vector<UncategorizedImage> testImages;
@@ -119,12 +119,59 @@ void trainNeuralNetwork() {
     testImages[75].value = 4;
     testImages[78].value = 3;
     
-    std::vector<int> trainingLoops = {300, 300, 300, 300, 300, 300, 300, 300, 300, 500, 750, 1000, 1000};
-    std::vector<int> neurons = {100, 100, 50, 100, 50, 150, 50, 50, 150, 150, 100, 100, 50};
-    std::vector<double> a = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-    std::vector<double> A = {0.01, 0.01, 0.02, 0.02, 0.01, 0.01, 0.02, 0.025, 0.025, 0.02, 0.02, 0.015, 0.025};
-    std::vector<double> u = {0.018, 0.025, 0.01, 0.02, 0.018, 0.018, 0.018, 0.018, 0.018, 0.018, 0.018, 0.018, 0.018};
+//    ImageHandler handler2("../images/3.jpg");
+//    std::vector<cv::Mat> squares2 = handler2.squares();
+//    
+//    for (int index = 0 ; index < 9 * 9 ; index++) {
+//        UncategorizedImage image;
+//        image.image = squares2[index];
+//        testImages.push_back(image);
+//    }
+//    
+//    testImages[81 + 1].value = 2;
+//    testImages[81 + 7].value = 6;
+//    testImages[81 + 9].value = 4;
+//    testImages[81 + 10].value = 8;
+//    testImages[81 + 13].value = 7;
+//    testImages[81 + 14].value = 6;
+//    testImages[81 + 16].value = 1;
+//    testImages[81 + 17].value = 3;
+//    testImages[81 + 18].value = 3;
+//    testImages[81 + 24].value = 8;
+//    testImages[81 + 30].value = 6;
+//    testImages[81 + 31].value = 4;
+//    testImages[81 + 33].value = 9;
+//    testImages[80 + 37].value = 6;
+//    testImages[81 + 40].value = 2;
+//    testImages[81 + 43].value = 3;
+//    testImages[81 + 47].value = 9;
+//    testImages[81 + 49].value = 3;
+//    testImages[81 + 50].value = 1;
+//    testImages[81 + 56].value = 4;
+//    testImages[81 + 62].value = 1;
+//    testImages[81 + 63].value = 8;
+//    testImages[81 + 64].value = 1;
+//    testImages[81 + 66].value = 7;
+//    testImages[81 + 67].value = 9;
+//    testImages[81 + 70].value = 4;
+//    testImages[81 + 71].value = 2;
+//    testImages[81 + 73].value = 7;
+//    testImages[81 + 79].value = 8;
+    
+    
+//    std::vector<int> trainingLoops = {300, 300, 300, 300, 300, 300, 300, 300, 300, 500, 750, 1000, 1000};
+//    std::vector<int> neurons = {100, 100, 50, 100, 50, 150, 50, 50, 150, 150, 100, 100, 50};
+//    std::vector<double> a = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+//    std::vector<double> A = {0.01, 0.01, 0.02, 0.02, 0.01, 0.01, 0.02, 0.025, 0.025, 0.02, 0.02, 0.015, 0.025};
+//    std::vector<double> u = {0.018, 0.025, 0.01, 0.02, 0.018, 0.018, 0.018, 0.018, 0.018, 0.018, 0.018, 0.018, 0.018};
 
+    std::vector<int> trainingLoops = {2500, 10, 10};
+    std::vector<int> neurons = {100, 100, 100};
+    std::vector<double> a = {1, 1, 1};
+    std::vector<double> A = {0.025, 0.015, 0.015};
+    std::vector<double> u = {0.018, 0.018, 0.018};
+
+    
     for (int i = 0 ; i < a.size() ; i++) {
         
         cout << i << " " << endl;
