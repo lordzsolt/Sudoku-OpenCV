@@ -85,71 +85,6 @@ void NeuralNetwork::categorizeImages(std::vector<UncategorizedImage> images) {
     logger.close();
 }
 
-void NeuralNetwork::saveWeights() {
-    ofstream output;
-    output.open(w1FilePath());
-    output << _w1.rows() << " " << _w1.cols() << endl;
-    for (int row = 0 ; row < _w1.rows() ; row++) {
-        for (int col = 0 ; col < _w1.cols() ; col++) {
-            output << _w1(row, col) << " ";
-        }
-        output << "\n";
-    }
-    output.close();
-    
-    output.open(w2FilePath());
-    output << _w2.rows() << " " << _w2.cols() << endl;
-    for (int row = 0 ; row < _w2.rows() ; row++) {
-        for (int col = 0 ; col < _w2.cols() ; col++) {
-            output << _w2(row, col) << " ";
-        }
-        output << "\n";
-    }
-    output.close();
-}
-
-void NeuralNetwork::loadWeights() {
-    ifstream input;
-    input.open(w1FilePath());
-    if (input.is_open()) {
-        int rows;
-        int cols;
-        input >> rows >> cols;
-        _w1 = MatrixXf(rows, cols);
-        for (int row = 0 ; row < rows ; row++) {
-            for (int col = 0 ; col < cols ; col++) {
-                double value;
-                input >> value;
-                _w1(row, col) = value;
-            }
-        }
-        input.close();
-    }
-    else {
-        _w1 = MatrixXf::Random(_inputMatrixSize, _neuronsInHiddenLayer) * 0.5 * _A;
-    }
-    
-    input.open(w2FilePath());
-    if (input.is_open()) {
-        int rows;
-        int cols;
-        input >> rows >> cols;
-        _w2 = MatrixXf(rows, cols);
-        for (int row = 0 ; row < rows ; row++) {
-            for (int col = 0 ; col < cols ; col++) {
-                double value;
-                input >> value;
-                _w2(row, col) = value;
-            }
-        }
-        input.close();
-    }
-    else {
-        _w2 = MatrixXf::Random( _neuronsInHiddenLayer, _outputSize) * 0.5 * _A;
-    }
-}
-
-
 double NeuralNetwork::learnFromImage(cv::Mat image, int expectedValue) {
     MatrixXf d(_outputSize, 1);
     for (int index = 0 ; index < _outputSize ; index++) {
@@ -266,6 +201,70 @@ double NeuralNetwork::hyperbolicTangentDerivative(double value, double steepness
     return result;
 }
 
+void NeuralNetwork::saveWeights() {
+    ofstream output;
+    output.open(w1FilePath());
+    output << _w1.rows() << " " << _w1.cols() << endl;
+    for (int row = 0 ; row < _w1.rows() ; row++) {
+        for (int col = 0 ; col < _w1.cols() ; col++) {
+            output << _w1(row, col) << " ";
+        }
+        output << "\n";
+    }
+    output.close();
+    
+    output.open(w2FilePath());
+    output << _w2.rows() << " " << _w2.cols() << endl;
+    for (int row = 0 ; row < _w2.rows() ; row++) {
+        for (int col = 0 ; col < _w2.cols() ; col++) {
+            output << _w2(row, col) << " ";
+        }
+        output << "\n";
+    }
+    output.close();
+}
+
+void NeuralNetwork::loadWeights() {
+    ifstream input;
+    input.open(w1FilePath());
+    if (input.is_open()) {
+        int rows;
+        int cols;
+        input >> rows >> cols;
+        _w1 = MatrixXf(rows, cols);
+        for (int row = 0 ; row < rows ; row++) {
+            for (int col = 0 ; col < cols ; col++) {
+                double value;
+                input >> value;
+                _w1(row, col) = value;
+            }
+        }
+        input.close();
+    }
+    else {
+        _w1 = MatrixXf::Random(_inputMatrixSize, _neuronsInHiddenLayer) * 0.5 * _A;
+    }
+    
+    input.open(w2FilePath());
+    if (input.is_open()) {
+        int rows;
+        int cols;
+        input >> rows >> cols;
+        _w2 = MatrixXf(rows, cols);
+        for (int row = 0 ; row < rows ; row++) {
+            for (int col = 0 ; col < cols ; col++) {
+                double value;
+                input >> value;
+                _w2(row, col) = value;
+            }
+        }
+        input.close();
+    }
+    else {
+        _w2 = MatrixXf::Random( _neuronsInHiddenLayer, _outputSize) * 0.5 * _A;
+    }
+}
+
 void NeuralNetwork::openLogger() {
     int index = 0;
     string path;
@@ -289,7 +288,7 @@ void NeuralNetwork::openLogger() {
 
 
 std::string NeuralNetwork::w1FilePath() {
-//    return "../w1.txt";
+    return "../w1.txt";
     
     ostringstream os;
     os << finalPath << w1OutputFile;
@@ -298,7 +297,7 @@ std::string NeuralNetwork::w1FilePath() {
 }
 
 std::string NeuralNetwork::w2FilePath() {
-//    return "../w2.txt";
+    return "../w2.txt";
     
     ostringstream os;
     os << finalPath << w2OutputFile;

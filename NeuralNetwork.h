@@ -35,10 +35,10 @@ public:
     void beginLearning();
     void categorizeImages(std::vector<UncategorizedImage> images);
     
-    int _trainingLoopCount = 500;
-    int _neuronsInHiddenLayer = 150;
+    int _trainingLoopCount = 1000;
+    int _neuronsInHiddenLayer = 100;
     double _a = 1;
-    double _A = 0.02;
+    double _A = 0.015;
     double _u = 0.018;
     
 private:
