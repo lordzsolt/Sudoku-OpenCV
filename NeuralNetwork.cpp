@@ -39,8 +39,6 @@ void NeuralNetwork::beginLearning() {
     logger << "_A : " << _A << "\n";
     logger << "_u : " << _u << "\n";
     
-    int t0 = time(NULL);
-    
     double error = 0.0f;
     for (int loopCount = 0 ; loopCount < _trainingLoopCount; loopCount++) {
         error = 0.0f;
@@ -56,9 +54,6 @@ void NeuralNetwork::beginLearning() {
 //            cout << loopCount << ": " << error << "\n";
         }
     }
-    
-    int t1 = time(NULL);
-    logger << "Duration: " << t1 - t0 << endl;
     
     saveWeights();
 }

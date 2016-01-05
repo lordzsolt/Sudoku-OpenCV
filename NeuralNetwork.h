@@ -14,8 +14,8 @@
 #include <iostream>
 #include <fstream>
 #include <opencv2/highgui.hpp>
-#include <eigen3/Eigen/Dense>
-#include <eigen3/Eigen/Core>
+#include <Eigen3/Core>
+#include <Eigen3/Dense>
 
 struct CategorizedImage {
     int value;
@@ -42,11 +42,12 @@ public:
     double _u = 0.018;
     
 private:
+
     std::vector<CategorizedImage> _trainingSet;
     
-    const int _inputSize = 50 * 50;
-    const int _outputSize = 10;
-    const int _inputMatrixSize = _inputSize + 1;
+    static const int _inputSize = 50 * 50;
+	static const int _outputSize = 10;
+	static const int _inputMatrixSize = _inputSize + 1;
     
     Eigen::MatrixXf _w1;
     Eigen::MatrixXf _w2;

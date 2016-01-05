@@ -2,6 +2,7 @@
 #include <iostream>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+#include <Eigen3/Geometry>
 
 using namespace std;
 using namespace cv;
@@ -45,7 +46,7 @@ void ImageHandler::findSudokuBoard() {
     //thus there were too many intersections between the horizontal and vertical lines.
     //However with contours, sometimes lines would be connected
     findLinesWithContours();
-//    findLinesWithHoughLines();
+    //findLinesWithHoughLines();
     
     correctImage();
 }
@@ -87,12 +88,12 @@ void ImageHandler::findContours() {
     auto originalImage = this->lastImage();
     
     auto lastImage = inverseBinaryThresholdFilter(originalImage, 5);
+
+	vector<vector<Point>> contours;
+	vector<Vec4i> hierarchy;
+	cv::findContours(lastImage, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
     
-    vector<vector<Point>> contours;
-    vector<Vec4i> hierarchy;
-    cv::findContours(lastImage, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
-    
-    //We assume the largest area is the Sudoku board
+    //We assume the largest area is the Sudoku board, which is at least 25% of the image
     double largestArea = lastImage.size().height * lastImage.size().width * 0.25;;
     vector<Point> bestContour;
     for (auto it : contours) {
@@ -117,7 +118,7 @@ void ImageHandler::findContours() {
     
     _filteredImages.push_back(result);
     _sudokuBoard = result;
-    _boardContour = bestContour;
+    _boardContour = vector<Point>(bestContour);
     displayImage(result);
     
     warpBoard(mask);
@@ -255,8 +256,8 @@ void ImageHandler::findLinesWithContours() {
     vector<Mat> lines = {horizontalLines, verticalLines};
     
     //Multipliers will be used for kernel size
-    vector<float> widthMultipliers = {0.015, 0.0015};
-    vector<float> heightMultipliers = {0.0015, 0.015};
+    vector<float> widthMultipliers = {0.015f, 0.0015f};
+    vector<float> heightMultipliers = {0.0015f, 0.015f};
     
     vector<int> sobel = {0, 1};
     
@@ -285,7 +286,7 @@ void ImageHandler::findLinesWithContours() {
         
         vector<vector<Point>> contours;
         vector<Vec4i> hierarchy;
-        cv::findContours(close, contours, hierarchy, RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+        cv::findContours(close, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
         auto mask = lines[i];
         for (auto it : contours) {
             auto area = boundingRect(it);
